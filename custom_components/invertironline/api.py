@@ -349,9 +349,11 @@ class IOLApiClient:
         data = await self._async_get(ENDPOINT_ESTADO_CUENTA)
         return data if isinstance(data, dict) else {}
 
-    async def async_get_portafolio(self) -> dict[str, Any]:
-        """Fetch consolidated Argentina portfolio holdings."""
-        data = await self._async_get(ENDPOINT_PORTAFOLIO)
+    async def async_get_portafolio(self, pais: str = "Argentina") -> dict[str, Any]:
+        """Fetch consolidated portfolio holdings for the given country (Argentina / Estados_Unidos)."""
+        clean_pais = "Estados_Unidos" if str(pais).strip().lower() in ("estados_unidos", "eeuu", "usa", "us") else "Argentina"
+        endpoint = f"/api/v2/portafolio/{clean_pais}" if clean_pais != "Argentina" else ENDPOINT_PORTAFOLIO
+        data = await self._async_get(endpoint)
         return data if isinstance(data, dict) else {}
 
     async def async_get_inflacion(self, url: str) -> dict[str, Any] | None:

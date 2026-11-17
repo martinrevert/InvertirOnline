@@ -92,8 +92,24 @@ MOCK_ESTADO_CUENTA: dict[str, Any] = {
 MOCK_PORTAFOLIO: dict[str, Any] = {
     "pais": "argentina",
     "activos": [
-        {"titulo": {"simbolo": "SPY"}, "valorizado": 1500000.0},
-        {"titulo": {"simbolo": "AL30"}, "valorizado": 500000.0},
+        {
+            "cantidad": 40.0,
+            "ultimoPrecio": 37500.0,
+            "valorizado": 1500000.0,
+            "variacionDiaria": 1.5,
+            "gananciaDinero": 120000.0,
+            "gananciaPorcentaje": 8.7,
+            "titulo": {"simbolo": "SPY", "descripcion": "CEDEAR SPY", "tipo": "CEDEAR", "moneda": "ARS"},
+        },
+        {
+            "cantidad": 1000.0,
+            "ultimoPrecio": 500.0,
+            "valorizado": 500000.0,
+            "variacionDiaria": 0.8,
+            "gananciaDinero": 30000.0,
+            "gananciaPorcentaje": 6.4,
+            "titulo": {"simbolo": "AL30", "descripcion": "Bono AL30", "tipo": "TitulosPublicos", "moneda": "ARS"},
+        },
     ],
 }
 

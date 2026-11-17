@@ -13,16 +13,26 @@ from homeassistant.helpers import config_validation as cv
 
 from .api import IOLApiClient, IOLApiError
 from .const import DEFAULT_MARKET, DOMAIN
-from .coordinator import normalize_quote
+from .coordinator import normalize_portfolio, normalize_quote
 
 SERVICE_GET_QUOTE = "get_quote"
+SERVICE_GET_PORTFOLIO = "get_portfolio"
 ATTR_SIMBOLO = "simbolo"
 ATTR_MERCADO = "mercado"
+ATTR_PAIS = "pais"
+ATTR_TIPO = "tipo"
 
 GET_QUOTE_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_SIMBOLO): cv.string,
         vol.Optional(ATTR_MERCADO, default=DEFAULT_MARKET): cv.string,
+    }
+)
+
+GET_PORTFOLIO_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_PAIS, default="Argentina"): cv.string,
+        vol.Optional(ATTR_TIPO): cv.string,
     }
 )
 
@@ -43,9 +53,6 @@ def _get_active_api_client(hass: HomeAssistant) -> IOLApiClient:
 
 async def async_register_services(hass: HomeAssistant) -> None:
     """Register InvertirOnline service actions."""
-    if hass.services.has_service(DOMAIN, SERVICE_GET_QUOTE):
-        return
-
     async def handle_get_quote(call: ServiceCall) -> ServiceResponse:
         """Handle invertironline.get_quote service call."""
         simbolo = str(call.data[ATTR_SIMBOLO]).strip().upper()
@@ -76,16 +83,42 @@ async def async_register_services(hass: HomeAssistant) -> None:
         }
         return payload
 
-    hass.services.async_register(
-        DOMAIN,
-        SERVICE_GET_QUOTE,
-        handle_get_quote,
-        schema=GET_QUOTE_SCHEMA,
-        supports_response=SupportsResponse.ONLY,
-    )
+    if not hass.services.has_service(DOMAIN, SERVICE_GET_QUOTE):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_QUOTE,
+            handle_get_quote,
+            schema=GET_QUOTE_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
+
+    async def handle_get_portfolio(call: ServiceCall) -> ServiceResponse:
+        """Handle invertironline.get_portfolio service call."""
+        pais = str(call.data.get(ATTR_PAIS, "Argentina")).strip() or "Argentina"
+        tipo = call.data.get(ATTR_TIPO)
+
+        api = _get_active_api_client(hass)
+        try:
+            raw = await api.async_get_portafolio(pais=pais)
+        except IOLApiError as err:
+            raise HomeAssistantError(
+                f"Error al consultar el portafolio ({pais}): {err}"
+            ) from err
+
+        return normalize_portfolio(raw, tipo_filtro=tipo)
+
+    if not hass.services.has_service(DOMAIN, SERVICE_GET_PORTFOLIO):
+        hass.services.async_register(
+            DOMAIN,
+            SERVICE_GET_PORTFOLIO,
+            handle_get_portfolio,
+            schema=GET_PORTFOLIO_SCHEMA,
+            supports_response=SupportsResponse.ONLY,
+        )
 
 
 async def async_unregister_services(hass: HomeAssistant) -> None:
     """Unregister InvertirOnline service actions when no entries remain."""
-    if hass.services.has_service(DOMAIN, SERVICE_GET_QUOTE):
-        hass.services.async_remove(DOMAIN, SERVICE_GET_QUOTE)
+    for service_name in (SERVICE_GET_QUOTE, SERVICE_GET_PORTFOLIO):
+        if hass.services.has_service(DOMAIN, service_name):
+            hass.services.async_remove(DOMAIN, service_name)

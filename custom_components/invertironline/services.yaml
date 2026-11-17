@@ -24,3 +24,28 @@ get_quote:
             - "NYSE"
             - "NASDAQ"
           custom_value: true
+
+get_portfolio:
+  name: Consultar portafolio completo
+  description: >-
+    Obtiene en vivo el detalle normalizado de todas las posiciones abiertas en la
+    cartera del usuario (ordenadas por valorizado) para Assist o automatizaciones.
+  fields:
+    pais:
+      name: País
+      description: Cartera a consultar (Argentina o Estados_Unidos).
+      required: false
+      default: "Argentina"
+      example: "Argentina"
+      selector:
+        select:
+          options:
+            - "Argentina"
+            - "Estados_Unidos"
+    tipo:
+      name: Tipo de activo (opcional)
+      description: Filtro opcional por tipo de instrumento (ej. CEDEAR, Acciones, TitulosPublicos, FCI).
+      required: false
+      example: "CEDEAR"
+      selector:
+        text:

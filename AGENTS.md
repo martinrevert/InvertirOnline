@@ -2,6 +2,11 @@
 
 Este documento establece las especificaciones mandatorias, estándares de arquitectura, restricciones de seguridad y directivas de implementación que todo Agente de Inteligencia Artificial (Claude Code, Cursor, Copilot, Windsurf, OpenCode o equivalentes) debe acatar de forma estricta al generar, refactorizar o mantener el código de la integración personalizada de InvertirOnline (IOL) para Home Assistant.
 
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
+
 ---
 
 ## 1. Principios de Operación y Reglas Mandatorias para Agentes AI
@@ -21,6 +26,11 @@ Los agentes de desarrollo autónomo deben operar bajo estrictas directivas de co
 * **PROHIBICIÓN DE ALMACENAMIENTO DE CREDENCIALES EN TEXTO PLANO:** Queda prohibido persistir claves, tokens o contraseñas en archivos temporales, registros de depuración (*logs*) o archivos YAML en disco. Todos los datos de autenticación deben residir gestionados en el `ConfigEntry` cifrado de Home Assistant.
 * **PROHIBICIÓN DE SONDEO AGRESIVO (Control Estricto de Rate Limiting):** No configurar intervalos de actualización inferiores a 15 minutos en el coordinador. La API de IOL asigna una cuota mensual bonificada de 25.000 llamadas; sondeos indiscriminados provocarán bloqueos temporales de IP o recargos tarifarios en la cuenta comitente del usuario.
 
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
+
 ---
 
 ## 2. Stack Tecnológico y Estándares de Arquitectura
@@ -36,6 +46,11 @@ El desarrollo debe alinearse rigurosamente con las especificaciones de Home Assi
   * `entity-unique-id`: Asignación determinística de `unique_id` basada en el número de cuenta comitente y el identificador unívoco de cada instrumento financiero.
   * `has-entity-name`: Todas las entidades deben declarar `_attr_has_entity_name = True`.
   * `config-entry-unloading`: Implementación completa de descarga y limpieza de recursos en `async_unload_entry`.
+
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
 
 ---
 
@@ -58,13 +73,38 @@ La comunicación con los servicios de InvertirOnline se realiza a través de su 
 ### 3.2. Catálogo de Endpoints de Monitoreo
 
 | Instrumento / Métrica | Endpoint Relativo | Método | Descripción y Parámetros |
-| :--- | :--- | :--- | :--- |
+| :### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
+
+--- | :### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
+
+--- | :### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
+
+--- | :### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
+
+--- |
 | **Cauciones Bursátiles** | `/api/v2/Cotizaciones/cauciones/todas/argentina` (fallback `/api/v2/Cotizaciones/cauciones/Argentina`) | `GET` | Recupera el panel de cauciones vigente en el mercado argentino; los plazos pueden venir como `plazo` o dentro de `simbolo`/`descripcion` (ej. `"PESOS 1D"`). |
 | **CEDEAR SPY** | `/api/v2/bCBA/Titulos/SPY/Cotizacion` | `GET` | Recupera el último precio, puntas compradoras/vendedoras y variación diaria del CEDEAR representativo del índice bursátil. |
 | **Dólar MEP** | `/api/v2/Cotizaciones/Dolar/Mep` (fallback `AL30`/`AL30D` o `GD30`/`GD30D`) | `GET` | Si el endpoint directo no está disponible en la cuenta/API, se calcula mediante el ratio implícito `AL30 / AL30D` (o `GD30 / GD30D`). |
 | **Estado de Cuenta** | `/api/v2/estadocuenta` | `GET` | Devuelve el desglose de saldos líquidos disponibles y saldos comprometidos por moneda. |
 | **Portafolio Consolidado** | `/api/v2/portafolio/Argentina` | `GET` | Devuelve la valorización patrimonial total de las tenencias valorizadas en moneda local y extranjera. |
 | **Consulta Dinámica (Assist)** | `/api/v2/{mercado}/Titulos/{simbolo}/Cotizacion` | `GET` | Endpoint parametrizado para resolver cotizaciones de cualquier ticker a petición del usuario. |
+
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
 
 ---
 
@@ -143,6 +183,11 @@ Además de los 9 sensores base obligatorios (5 cauciones + CEDEAR SPY + 3 valuac
 2. **Ajustar el intervalo de actualización (`scan_interval_minutes`)**, validando estrictamente que **nunca sea menor a 15 minutos** para proteger la cuota mensual de 25.000 llamadas de la API de IOL.
 3. Recargar automáticamente la entrada (`async_reload`) al guardar cambios en las opciones para instanciar los nuevos sensores sin requerir reinicio completo de Home Assistant.
 
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
+
 ---
 
 ## 5. Servicio de Consulta Dinámica para Asistente de Voz (Assist / LLM)
@@ -183,6 +228,11 @@ Al exponer esta acción al motor de LLM de Home Assistant, cualquier usuario pod
 * *"¿Qué variación tuvo el bono AL30 hoy?"*
 
 El LLM invocará `invertironline.get_quote` y generará una respuesta hablada contextualizada a través de las canalizaciones de Assist.
+
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
 
 ---
 
@@ -245,6 +295,11 @@ tests/
 }
 ```
 
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
+
 ---
 
 ## 7. Estrategia de Pruebas Automatizadas con `pytest-homeassistant`
@@ -259,6 +314,11 @@ Para garantizar que el componente alcance el estándar de calidad y no sufra reg
   3. `test_coordinator_token_refresh`: Valida que el coordinador detecta la proximidad de expiración del token y dispara correctamente la solicitud de refresco con `grant_type="refresh_token"`.
   4. `test_sensor_caucion_attributes`: Verifica que los sensores de cauciones (1, 7, 14, 30 y 60 días) cargan correctamente tanto la tasa colocadora en el estado como las puntas y el volumen en sus atributos.
   5. `test_service_get_quote`: Verifica que la acción `invertironline.get_quote` procesa los parámetros de entrada y devuelve el diccionario estructurado esperado.
+
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
 
 ---
 
@@ -312,6 +372,11 @@ action:
         equivalentes a {{ states('sensor.iol_cuenta_total_usd_mep') }} dólares MEP. 
         La caución a un día está rindiendo una tasa colocadora del {{ states('sensor.iol_caucion_1d') }} por ciento.
 ```
+
+### 5.3. Acción `invertironline.get_portfolio` y Sensor Opcional `sensor.iol_portafolio`
+Para exponer la cartera completa a demanda sin poblar decenas de sensores por cada tenencia:
+* **Acción `invertironline.get_portfolio` (`SupportsResponse.ONLY`):** Consulta en vivo `/api/v2/portafolio/{pais}` (`Argentina` o `Estados_Unidos`), permite filtrar opcionalmente por `tipo` (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`) y devuelve el portafolio normalizado (`cantidad_activos`, `total_valorizado`, `ganancia_total`, `distribucion_por_tipo`, `activos` ordenados de mayor a menor `valorizado`).
+* **Sensor opt-in `sensor.iol_portafolio`:** Registrado con `_attr_entity_registry_enabled_default = False`. Su estado es `cantidad_activos` y sus atributos exponen la estructura normalizada reutilizando los datos del coordinador (0 llamadas extra a la API).
 
 ---
 

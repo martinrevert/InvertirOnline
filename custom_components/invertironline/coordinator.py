@@ -349,6 +349,84 @@ def _extract_account_summary(
     }
 
 
+def normalize_portfolio(
+    raw: dict[str, Any], tipo_filtro: str | None = None
+) -> dict[str, Any]:
+    """Normalize IOL portfolio response into a compact, sorted structure."""
+    raw_activos = raw.get("activos")
+    if not isinstance(raw_activos, list):
+        raw_activos = []
+
+    filtro_norm = _normalize_text(tipo_filtro).strip() if tipo_filtro else ""
+    parsed_items: list[dict[str, Any]] = []
+
+    for item in raw_activos:
+        if not isinstance(item, dict):
+            continue
+        titulo = item.get("titulo") if isinstance(item.get("titulo"), dict) else {}
+        simbolo = str(titulo.get("simbolo") or item.get("simbolo") or "").upper()
+        if not simbolo:
+            continue
+
+        tipo = str(titulo.get("tipo") or item.get("tipo") or "Otros")
+        if filtro_norm and filtro_norm not in _normalize_text(tipo):
+            continue
+
+        valorizado = safe_float(item.get("valorizado")) or 0.0
+        ganancia_dinero = safe_float(item.get("gananciaDinero"))
+        ganancia_pct = safe_float(item.get("gananciaPorcentaje"))
+
+        parsed_items.append(
+            {
+                "simbolo": simbolo,
+                "descripcion": titulo.get("descripcion") or item.get("descripcion") or simbolo,
+                "tipo": tipo,
+                "cantidad": safe_float(item.get("cantidad")),
+                "ultimo_precio": safe_float(item.get("ultimoPrecio")),
+                "valorizado": round(valorizado, 2),
+                "variacion_diaria": safe_float(item.get("variacionDiaria")),
+                "ganancia_dinero": round(ganancia_dinero, 2) if ganancia_dinero is not None else None,
+                "ganancia_porcentaje": round(ganancia_pct, 2) if ganancia_pct is not None else None,
+                "moneda": titulo.get("moneda") or item.get("moneda") or "ARS",
+            }
+        )
+
+    parsed_items.sort(key=lambda x: x["valorizado"], reverse=True)
+
+    total_valorizado = round(sum(x["valorizado"] for x in parsed_items), 2)
+    ganancia_total = round(
+        sum(x["ganancia_dinero"] for x in parsed_items if x["ganancia_dinero"] is not None),
+        2,
+    )
+
+    distribucion_raw: dict[str, float] = {}
+    for entry in parsed_items:
+        peso = (
+            round((entry["valorizado"] / total_valorizado) * 100, 2)
+            if total_valorizado > 0
+            else 0.0
+        )
+        entry["peso_porcentaje"] = peso
+        distribucion_raw[entry["tipo"]] = distribucion_raw.get(entry["tipo"], 0.0) + entry["valorizado"]
+
+    distribucion_por_tipo = {
+        k: {
+            "valorizado": round(v, 2),
+            "porcentaje": round((v / total_valorizado) * 100, 2) if total_valorizado > 0 else 0.0,
+        }
+        for k, v in sorted(distribucion_raw.items(), key=lambda kv: kv[1], reverse=True)
+    }
+
+    return {
+        "pais": raw.get("pais") or "argentina",
+        "cantidad_activos": len(parsed_items),
+        "total_valorizado": total_valorizado,
+        "ganancia_total": ganancia_total,
+        "distribucion_por_tipo": distribucion_por_tipo,
+        "activos": parsed_items,
+    }
+
+
 def _extract_direct_ccl(
     estado_cuenta: dict[str, Any], dolar_list: Any
 ) -> float | None:
@@ -673,6 +751,7 @@ class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "cauciones": cauciones,
             "spy": spy_quote,
             "account": account,
+            "portafolio": normalize_portfolio(portafolio) if portafolio else previous_data.get("portafolio", {}),
             "dolar_mep": round(dolar_mep, 2) if dolar_mep is not None else None,
             "total_usd_mep": total_usd_mep,
             "dolar_ccl": ccl_rate,

@@ -68,17 +68,42 @@ Podés agregar sensores fijos para otros activos sin tocar YAML:
 
 ---
 
-## Consultas por Voz con Assist / LLM (`invertironline.get_quote`)
+## Consultas por Voz con Assist / LLM y Portafolio a Demanda
 
-Para consultar cualquier activo bajo demanda sin llenar Home Assistant de sensores fijos, la integración expone la acción **`invertironline.get_quote`** (`SupportsResponse.ONLY`).
+Para consultar activos o tu cartera bajo demanda sin llenar Home Assistant de sensores fijos, la integración expone dos acciones (`SupportsResponse.ONLY`) y un sensor opcional:
 
+### 1. `invertironline.get_quote`
 - **Parámetros:**
   - `simbolo` (obligatorio): ej. `GGAL`, `AL30`, `AAPL`, `YPFD`.
   - `mercado` (opcional, por defecto `bCBA`): `bCBA`, `NYSE`, `NASDAQ`.
 - **Ejemplos de uso con Assist / Agente LLM:**
   - *"¿A cuánto cotiza Galicia en InvertirOnline?"*
   - *"Consultá el precio del bono AL30 hoy."*
-  - *"¿Qué variación tuvo YPFD?"*
+
+### 2. `invertironline.get_portfolio` (Cartera Completa a Demanda)
+Consulta en vivo la cartera completa ordenada por monto valorizado, con ganancia y peso porcentual de cada activo:
+- **Parámetros opcionales:**
+  - `pais`: `Argentina` (por defecto) o `Estados_Unidos`.
+  - `tipo`: filtro por tipo de instrumento (ej. `CEDEAR`, `Acciones`, `TitulosPublicos`, `FCI`).
+- **Ejemplos de uso con Assist / Agente LLM:**
+  - *"¿Cómo está compuesto mi portafolio de InvertirOnline?"*
+  - *"Mostrame mis CEDEARs en InvertirOnline y cuánto gané."*
+
+### 3. Sensor opcional `sensor.iol_portafolio` (para Dashboards)
+- Viene **deshabilitado por defecto** en el registro de entidades para no recargar tu interfaz si no lo necesitás.
+- Si querés armar un dashboard con tu tenencia completa, habilitalo con 1 clic en **Ajustes → Dispositivos y servicios → InvertirOnline → Entidades** (no consume llamadas extra a la API porque reutiliza el portafolio que el coordinador ya trae).
+- Podés mostrarlo en una **Tarjeta Markdown**:
+  ```yaml
+  type: markdown
+  title: Mi Portafolio IOL
+  content: |
+    **Total:** ${{ state_attr('sensor.iol_portafolio', 'total_valorizado') }} ARS
+    | Activo | Cant. | Valorizado | % |
+    | :--- | ---: | ---: | ---: |
+    {% for a in state_attr('sensor.iol_portafolio', 'activos') or [] -%}
+    | {{ a.simbolo }} | {{ a.cantidad }} | ${{ a.valorizado }} | {{ a.peso_porcentaje }}% |
+    {% endfor %}
+  ```
 
 ---
 

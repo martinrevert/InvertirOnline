@@ -115,3 +115,52 @@ async def test_service_get_quote(hass: HomeAssistant, mock_iol_api) -> None:
         "volumen": 142050.0,
         "fecha_hora": "2026-11-17T15:30:00",
     }
+
+
+async def test_service_get_portfolio_and_opt_in_sensor(
+    hass: HomeAssistant, mock_iol_api
+) -> None:
+    """Test invertironline.get_portfolio service and disabled-by-default portfolio sensor."""
+    from homeassistant.helpers import entity_registry as er
+
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="InvertirOnline (987654)",
+        data={CONF_USERNAME: "usuario_iol", CONF_PASSWORD: "secret_password"},
+        unique_id="iol_987654",
+    )
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # Portfolio sensor is registered but disabled by default
+    ent_reg = er.async_get(hass)
+    reg_entry = ent_reg.async_get("sensor.iol_portafolio")
+    assert reg_entry is not None
+    assert reg_entry.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+    assert hass.states.get("sensor.iol_portafolio") is None
+
+    # On-demand service returns full normalized portfolio (sorted by valorizado)
+    full = await hass.services.async_call(
+        DOMAIN,
+        "get_portfolio",
+        {"pais": "Argentina"},
+        blocking=True,
+        return_response=True,
+    )
+    assert full["cantidad_activos"] == 2
+    assert full["total_valorizado"] == 2000000.0
+    assert full["activos"][0]["simbolo"] == "SPY"
+    assert full["activos"][0]["peso_porcentaje"] == 75.0
+
+    # Filtered by tipo
+    filtered = await hass.services.async_call(
+        DOMAIN,
+        "get_portfolio",
+        {"pais": "Argentina", "tipo": "CEDEAR"},
+        blocking=True,
+        return_response=True,
+    )
+    assert filtered["cantidad_activos"] == 1
+    assert filtered["activos"][0]["simbolo"] == "SPY"

@@ -38,6 +38,7 @@ async def async_setup_entry(
             IOLAccountTotalUsdCclSensor(coordinator),
             IOLInflacionMensualSensor(coordinator),
             IOLInflacionInteranualSensor(coordinator),
+            IOLPortfolioSensor(coordinator),
         ]
     )
 
@@ -361,3 +362,39 @@ class IOLInflacionInteranualSensor(_IOLInflacionBaseSensor):
             entity_id="sensor.iol_inflacion_interanual",
             icon="mdi:calendar-range",
         )
+
+
+class IOLPortfolioSensor(IOLEntity, SensorEntity):
+    """Optional opt-in sensor exposing full portfolio holdings (disabled by default)."""
+
+    _attr_name = "Portafolio"
+    _attr_native_unit_of_measurement = "activos"
+    _attr_icon = "mdi:briefcase-outline"
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the opt-in portfolio sensor."""
+        super().__init__(coordinator, "portafolio")
+        self.entity_id = "sensor.iol_portafolio"
+
+    def _portfolio_data(self) -> dict[str, Any]:
+        """Return normalized portfolio dictionary from coordinator."""
+        if not self.coordinator.data:
+            return {}
+        return self.coordinator.data.get("portafolio") or {}
+
+    @property
+    def native_value(self) -> int | None:
+        """Return count of portfolio holdings."""
+        return self._portfolio_data().get("cantidad_activos")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return normalized holdings list and totals for dashboards."""
+        data = self._portfolio_data()
+        return {
+            "total_valorizado": data.get("total_valorizado"),
+            "ganancia_total": data.get("ganancia_total"),
+            "distribucion_por_tipo": data.get("distribucion_por_tipo"),
+            "activos": data.get("activos", []),
+        }
