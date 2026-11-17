@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect InvertirOnline (IOL)",
+        "description": "Enter your InvertirOnline credentials. This integration operates strictly in read-only monitoring mode.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate InvertirOnline (IOL)",
+        "description": "Your InvertirOnline session expired or credentials changed. Please enter your credentials again.",
+        "data": {
+          "username": "Username",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid username or password.",
+      "cannot_connect": "Unable to connect to the InvertirOnline API.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This InvertirOnline account is already configured.",
+      "reauth_successful": "Reauthentication was successful."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "InvertirOnline Options",
+        "description": "Configure additional fixed ticker sensors (comma-separated, e.g. GGAL, AL30, NYSE:AAPL) and the polling interval (minimum 15 minutes).",
+        "data": {
+          "extra_tickers": "Additional tickers",
+          "scan_interval_minutes": "Update interval (minutes)"
+        }
+      }
+    },
+    "error": {
+      "invalid_scan_interval": "Update interval must be at least 15 minutes to protect your IOL API quota."
+    }
+  }
+}

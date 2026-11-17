@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local deployment credentials (NEVER commit)
+.deploy.env
+.env
+
+# IDE / OS
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,14 @@
+{
+  "name": "Home Assistant InvertirOnline Dev",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "postCreateCommand": "pip install --no-cache-dir pytest pytest-homeassistant-custom-component voluptuous aiohttp",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff"
+      ]
+    }
+  }
+}

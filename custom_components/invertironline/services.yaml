@@ -1,0 +1,26 @@
+get_quote:
+  name: Consultar cotización
+  description: >-
+    Consulta la cotización en tiempo real de un título, CEDEAR, bono o acción en
+    InvertirOnline (IOL) para uso con Assist y automatizaciones.
+  fields:
+    simbolo:
+      name: Símbolo
+      description: Ticker o código del instrumento a consultar (ej. GGAL, AL30, SPY, AAPL).
+      required: true
+      example: "GGAL"
+      selector:
+        text:
+    mercado:
+      name: Mercado
+      description: Mercado del instrumento (por defecto bCBA para bolsa argentina).
+      required: false
+      default: "bCBA"
+      example: "bCBA"
+      selector:
+        select:
+          options:
+            - "bCBA"
+            - "NYSE"
+            - "NASDAQ"
+          custom_value: true

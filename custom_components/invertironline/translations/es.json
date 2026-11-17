@@ -1,0 +1,46 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Conectar InvertirOnline (IOL)",
+        "description": "Ingresá tus credenciales de InvertirOnline. Esta integración opera estrictamente en modo solo lectura.",
+        "data": {
+          "username": "Usuario",
+          "password": "Contraseña"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reautenticar InvertirOnline (IOL)",
+        "description": "Tu sesión de InvertirOnline expiró o las credenciales cambiaron. Por favor volvé a ingresarlas.",
+        "data": {
+          "username": "Usuario",
+          "password": "Contraseña"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Usuario o contraseña incorrectos.",
+      "cannot_connect": "No se pudo conectar con la API de InvertirOnline.",
+      "unknown": "Error inesperado."
+    },
+    "abort": {
+      "already_configured": "Esta cuenta de InvertirOnline ya está configurada.",
+      "reauth_successful": "La reautenticación fue exitosa."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de InvertirOnline",
+        "description": "Configurá tickers adicionales como sensores fijos (separados por coma, ej. GGAL, AL30, NYSE:AAPL) y el intervalo de actualización (mínimo 15 minutos).",
+        "data": {
+          "extra_tickers": "Tickers adicionales",
+          "scan_interval_minutes": "Intervalo de actualización (minutos)"
+        }
+      }
+    },
+    "error": {
+      "invalid_scan_interval": "El intervalo de actualización debe ser de al menos 15 minutos para proteger tu cuota de la API de IOL."
+    }
+  }
+}
