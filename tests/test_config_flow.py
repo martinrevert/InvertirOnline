@@ -99,3 +99,4 @@ async def test_options_flow_extra_tickers(hass: HomeAssistant, mock_iol_api) -> 
         CONF_EXTRA_TICKERS: ["GGAL", "AL30", "NYSE:AAPL"],
         CONF_SCAN_INTERVAL: 20,
     }
+    await hass.async_block_till_done()
