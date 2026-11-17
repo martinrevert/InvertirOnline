@@ -169,3 +169,13 @@ action:
         equivalentes a {{ states('sensor.iol_cuenta_total_usd_mep') }} dólares MEP.
         La caución a un día está rindiendo una tasa colocadora del {{ states('sensor.iol_caucion_1d') }} por ciento.
 ```
+
+---
+
+## Aviso Legal y Descargo de Responsabilidad (Disclaimer)
+
+- **Integración no oficial:** Este proyecto es un desarrollo comunitario e independiente. **No es una integración oficial** ni está afiliada, asociada, autorizada, respaldada ni vinculada de ninguna manera con **InvertirOnline (IOL)** ni con sus empresas relacionadas. Todas las marcas comerciales, nombres de productos y logotipos pertenecen a sus respectivos propietarios.
+- **Privacidad y alcance de los datos:** La integración se ejecuta localmente dentro de la instancia de Home Assistant configurada por el usuario y **no envía ni comparte credenciales, tokens ni información financiera fuera de dicho entorno**, operando bajo las premisas de seguridad, cifrado y control de acceso que disponga el propio ambiente Home Assistant del usuario (limitándose únicamente a consultar los endpoints públicos de IOL y de indicadores macroeconómicos configurados).
+- **Alcance actual (solo lectura) y evolución futura:** En su versión actual, la integración opera **exclusivamente en modo solo lectura**, orientada a la exposición de indicadores financieros para monitoreo, alertas y toma de decisiones del usuario, sin ejecutar órdenes ni transacciones. No obstante, el proyecto no descarta evolucionar en versiones futuras para habilitar operaciones autenticadas por el usuario (tanto con confirmación *human-in-the-loop* como automatizadas sin *human-in-the-loop*), bajo estricta responsabilidad y configuración explícita del usuario.
+- **Uso bajo propio riesgo:** La información mostrada tiene fines exclusivamente informativos y no constituye asesoramiento financiero ni recomendación de inversión. El autor y los colaboradores no asumen responsabilidad por demoras, interrupciones de servicio de terceros, diferencias de cotización ni decisiones tomadas a partir de los datos expuestos.
+
