@@ -107,9 +107,12 @@ def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
 @pytest.fixture
 def mock_iol_api() -> Generator[AsyncMock, None, None]:
     """Mock IOLApiClient methods with realistic responses (no network calls)."""
-    with patch(
-        "custom_components.invertironline.IOLApiClient", autospec=True
-    ) as mock_cls:
+    with (
+        patch("custom_components.invertironline.async_get_clientsession"),
+        patch(
+            "custom_components.invertironline.IOLApiClient", autospec=True
+        ) as mock_cls,
+    ):
         client = mock_cls.return_value
         client.async_authenticate = AsyncMock(return_value=MOCK_TOKEN_RESPONSE)
         client.async_refresh_token = AsyncMock(return_value=MOCK_TOKEN_RESPONSE)
