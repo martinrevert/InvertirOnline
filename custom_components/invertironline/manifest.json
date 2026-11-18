@@ -1,11 +1,13 @@
 {
   "domain": "invertironline",
   "name": "InvertirOnline (IOL)",
-  "codeowners": ["@martinrevert"],
+  "codeowners": [
+    "@martinrevert"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/martinrevert/InvertirOnline",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/martinrevert/InvertirOnline/issues",
-  "version": "1.0.1"
+  "version": "1.1.0"
 }
