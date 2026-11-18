@@ -15,8 +15,6 @@ jobs:
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
-    # hacs/action only supports public repositories; enable when making repo public
-    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

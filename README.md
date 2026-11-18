@@ -23,6 +23,14 @@ Al configurar tu cuenta se crea un dispositivo `InvertirOnline (<N° de cuenta>)
 | `sensor.iol_cuenta_total_usd_ccl` | Valuación total expresada en Dólar CCL | `USD` | `cotizacion_ccl_implicita`, `fuente_ccl` |
 | `sensor.iol_inflacion_mensual` | Última inflación mensual publicada (ArgentinaDatos) | `%` | `fecha`, `valor_anterior`, `fecha_anterior`, `fuente` |
 | `sensor.iol_inflacion_interanual` | Inflación acumulada últimos 12 meses (ArgentinaDatos) | `%` | `fecha`, `valor_anterior`, `fecha_anterior`, `fuente` |
+| `sensor.iol_inflacion_mensual_usd` | Última inflación mensual medida en Dólar MEP | `%` | `fecha`, `valor_anterior`, `fecha_anterior`, `fuente` |
+| `sensor.iol_inflacion_interanual_usd` | Inflación acumulada 12 meses medida en Dólar MEP | `%` | `fecha`, `valor_anterior`, `fecha_anterior`, `fuente` |
+| `sensor.iol_dolar_mep` | Cotización de referencia Dólar MEP | `ARS` | — |
+| `sensor.iol_dolar_ccl` | Cotización de referencia Dólar CCL | `ARS` | `fuente_ccl` |
+| `sensor.iol_disponible_ars` | Saldo líquido disponible en pesos | `ARS` | `comprometido`, `numero_cuenta` |
+| `sensor.iol_disponible_usd` | Saldo líquido disponible en dólares | `USD` | `comprometido`, `numero_cuenta` |
+| `sensor.iol_portafolio_ganancia` | Ganancia/pérdida total no realizada del portafolio | `ARS` | `total_valorizado`, `cantidad_activos` |
+| `binary_sensor.iol_mercado_abierto` | Indica si la rueda regular BYMA está abierta (Lun–Vie 11:00–17:00 ART) | — | `en_ventana_sondeo`, `horario_rueda`, `horario_sondeo` |
 
 ---
 
@@ -70,7 +78,7 @@ Podés agregar sensores fijos para otros activos sin tocar YAML:
 
 ## Consultas por Voz con Assist / LLM y Portafolio a Demanda
 
-Para consultar activos o tu cartera bajo demanda sin llenar Home Assistant de sensores fijos, la integración expone dos acciones (`SupportsResponse.ONLY`) y un sensor opcional:
+Para consultar activos o tu cartera bajo demanda sin llenar Home Assistant de sensores fijos, la integración expone cinco acciones (`SupportsResponse.ONLY`) y un sensor opcional:
 
 ### 1. `invertironline.get_quote`
 - **Parámetros:**
@@ -89,7 +97,16 @@ Consulta en vivo la cartera completa ordenada por monto valorizado, con ganancia
   - *"¿Cómo está compuesto mi portafolio de InvertirOnline?"*
   - *"Mostrame mis CEDEARs en InvertirOnline y cuánto gané."*
 
-### 3. Sensor opcional `sensor.iol_portafolio` (para Dashboards)
+### 3. `invertironline.get_operations`
+Consulta el historial de órdenes y operaciones en modo solo lectura (`estado`, `fecha_desde`, `fecha_hasta`, `pais`, `limite`).
+
+### 4. `invertironline.get_market_panel`
+Obtiene un panel completo del mercado (ej. `Acciones` / `Merval`, `CEDEARs`) ordenado por variación o volumen en una sola llamada (`instrumento`, `panel`, `pais`, `ordenar_por`, `limite`).
+
+### 5. `invertironline.get_historical_quotes`
+Obtiene la serie histórica OHLCV y la variación acumulada de un título entre dos fechas (`simbolo`, `fecha_desde`, `fecha_hasta`, `mercado`, `ajustada`).
+
+### 6. Sensor opcional `sensor.iol_portafolio` (para Dashboards)
 - Viene **deshabilitado por defecto** en el registro de entidades para no recargar tu interfaz si no lo necesitás.
 - Si querés armar un dashboard con tu tenencia completa, habilitalo con 1 clic en **Ajustes → Dispositivos y servicios → InvertirOnline → Entidades** (no consume llamadas extra a la API porque reutiliza el portafolio que el coordinador ya trae).
 - Podés mostrarlo en una **Tarjeta Markdown**:
