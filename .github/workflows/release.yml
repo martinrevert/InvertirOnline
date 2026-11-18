@@ -1,0 +1,80 @@
+name: Auto Release (SemVer)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git user
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine version and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          MANIFEST="custom_components/invertironline/manifest.json"
+          LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1 || true)
+
+          if [ -z "$LATEST_TAG" ]; then
+            NEW_VERSION=$(python3 -c "import json; print(json.load(open('$MANIFEST'))['version'])")
+            NEW_TAG="v${NEW_VERSION}"
+            echo "No existing v* tag found. Publishing initial release $NEW_TAG from manifest.json."
+          else
+            BASE_VER="${LATEST_TAG#v}"
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$BASE_VER"
+            COMMITS=$(git log "${LATEST_TAG}..HEAD" --format="%s%n%b")
+
+            if [ -z "$COMMITS" ]; then
+              echo "No new commits since $LATEST_TAG. Skipping release."
+              exit 0
+            fi
+
+            if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|^[a-zA-Z0-9_-]+(\([^)]+\))?!:)"; then
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+            elif echo "$COMMITS" | grep -qE "^feat(\([^)]+\))?:"; then
+              MINOR=$((MINOR + 1))
+              PATCH=0
+            else
+              PATCH=$((PATCH + 1))
+            fi
+
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            NEW_TAG="v${NEW_VERSION}"
+            echo "Bumping $LATEST_TAG -> $NEW_TAG"
+
+            python3 -c "
+          import json
+          path = '$MANIFEST'
+          with open(path, 'r', encoding='utf-8') as f:
+              data = json.load(f)
+          data['version'] = '$NEW_VERSION'
+          with open(path, 'w', encoding='utf-8') as f:
+              json.dump(data, f, indent=2, ensure_ascii=False)
+              f.write('\n')
+          "
+            git add "$MANIFEST"
+            git commit -m "chore(release): ${NEW_TAG} [skip ci]"
+            git push origin main
+          fi
+
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
+          gh release create "$NEW_TAG" --generate-notes --title "$NEW_TAG"
