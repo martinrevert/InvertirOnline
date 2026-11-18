@@ -1,6 +1,10 @@
 {
   "domain": "invertironline",
   "name": "InvertirOnline (IOL)",
+  "after_dependencies": [
+    "frontend",
+    "http"
+  ],
   "codeowners": [
     "@martinrevert"
   ],
