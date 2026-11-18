@@ -49,3 +49,166 @@ get_portfolio:
       example: "CEDEAR"
       selector:
         text:
+
+get_operations:
+  name: Consultar operaciones y órdenes
+  description: >-
+    Consulta el historial de órdenes y operaciones (pendientes, terminadas o canceladas)
+    en modo solo lectura para Assist o automatizaciones.
+  fields:
+    estado:
+      name: Estado (opcional)
+      description: Filtrar por estado (ej. todas, pendientes, terminadas, canceladas).
+      required: false
+      example: "pendientes"
+      selector:
+        select:
+          options:
+            - "todas"
+            - "pendientes"
+            - "terminadas"
+            - "canceladas"
+          custom_value: true
+    fecha_desde:
+      name: Fecha desde (opcional)
+      description: Fecha inicial en formato YYYY-MM-DD.
+      required: false
+      example: "2026-11-01"
+      selector:
+        text:
+    fecha_hasta:
+      name: Fecha hasta (opcional)
+      description: Fecha final en formato YYYY-MM-DD.
+      required: false
+      example: "2026-11-18"
+      selector:
+        text:
+    pais:
+      name: País
+      description: Mercado de la cuenta (argentina o estados_unidos).
+      required: false
+      default: "argentina"
+      selector:
+        select:
+          options:
+            - "argentina"
+            - "estados_unidos"
+    limite:
+      name: Límite de resultados
+      description: Cantidad máxima de operaciones a devolver (1 a 100).
+      required: false
+      default: 20
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: box
+
+get_market_panel:
+  name: Consultar panel de cotizaciones
+  description: >-
+    Obtiene un panel completo del mercado (Merval, CEDEARs, Bonos, etc.) ordenado por
+    variación o volumen en una sola llamada para Assist.
+  fields:
+    instrumento:
+      name: Instrumento
+      description: Categoría de instrumento (ej. Acciones, CEDEARs, TitulosPublicos, Letras, ObligacionesNegociables).
+      required: true
+      example: "Acciones"
+      selector:
+        select:
+          options:
+            - "Acciones"
+            - "CEDEARs"
+            - "TitulosPublicos"
+            - "Letras"
+            - "ObligacionesNegociables"
+          custom_value: true
+    panel:
+      name: Panel
+      description: Nombre del panel (ej. Merval, General, Lideres, Todos).
+      required: true
+      example: "Merval"
+      selector:
+        text:
+    pais:
+      name: País
+      description: País del mercado (Argentina o Estados_Unidos).
+      required: false
+      default: "Argentina"
+      selector:
+        select:
+          options:
+            - "Argentina"
+            - "Estados_Unidos"
+    ordenar_por:
+      name: Ordenar por
+      description: Criterio de ordenamiento del panel.
+      required: false
+      default: "variacion_desc"
+      selector:
+        select:
+          options:
+            - "variacion_desc"
+            - "variacion_asc"
+            - "volumen_desc"
+    limite:
+      name: Límite de títulos
+      description: Cantidad máxima de títulos a devolver (1 a 100).
+      required: false
+      default: 20
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: box
+
+get_historical_quotes:
+  name: Consultar serie histórica
+  description: >-
+    Obtiene cotizaciones históricas (OHLCV) y variación acumulada de un título entre dos
+    fechas para análisis con Assist o automatizaciones.
+  fields:
+    simbolo:
+      name: Símbolo
+      description: Ticker del instrumento (ej. GGAL, SPY, AL30).
+      required: true
+      example: "GGAL"
+      selector:
+        text:
+    fecha_desde:
+      name: Fecha desde
+      description: Fecha inicial en formato YYYY-MM-DD.
+      required: true
+      example: "2026-10-18"
+      selector:
+        text:
+    fecha_hasta:
+      name: Fecha hasta
+      description: Fecha final en formato YYYY-MM-DD.
+      required: true
+      example: "2026-11-18"
+      selector:
+        text:
+    mercado:
+      name: Mercado
+      description: Mercado del instrumento (por defecto bCBA).
+      required: false
+      default: "bCBA"
+      selector:
+        select:
+          options:
+            - "bCBA"
+            - "NYSE"
+            - "NASDAQ"
+          custom_value: true
+    ajustada:
+      name: Serie ajustada
+      description: Si se ajusta por dividendos/splits (ajustada o sinAjustar).
+      required: false
+      default: "ajustada"
+      selector:
+        select:
+          options:
+            - "ajustada"
+            - "sinAjustar"

@@ -181,4 +181,70 @@ def mock_iol_api() -> Generator[AsyncMock, None, None]:
             }
 
         client.async_get_inflacion = AsyncMock(side_effect=_inflacion)
+        client.async_get_dolar_historico = AsyncMock(
+            return_value=[
+                {"casa": "bolsa", "fecha": "2025-10-31", "compra": 1090.0, "venta": 1100.0},
+                {"casa": "bolsa", "fecha": "2026-08-31", "compra": 1110.0, "venta": 1120.0},
+                {"casa": "bolsa", "fecha": "2026-09-30", "compra": 1130.0, "venta": 1140.0},
+                {"casa": "bolsa", "fecha": "2026-10-31", "compra": 1145.0, "venta": 1150.0},
+            ]
+        )
+        client.async_get_operaciones = AsyncMock(
+            return_value=[
+                {
+                    "numero": 1001,
+                    "simbolo": "AL30",
+                    "tipo": "Compra",
+                    "estado": "terminada",
+                    "mercado": "bCBA",
+                    "cantidad": 500,
+                    "precio": 500.0,
+                    "monto": 250000.0,
+                    "fechaOrden": "2026-11-17T12:00:00",
+                    "fechaOperada": "2026-11-17T12:01:00",
+                }
+            ]
+        )
+        client.async_get_panel_cotizaciones = AsyncMock(
+            return_value=[
+                {
+                    "simbolo": "GGAL",
+                    "descripcion": "Grupo Financiero Galicia",
+                    "ultimoPrecio": 5420.5,
+                    "variacionPorcentual": 2.15,
+                    "volumen": 142050,
+                    "puntas": [{"precioCompra": 5415.0, "precioVenta": 5425.0}],
+                    "moneda": "ARS",
+                },
+                {
+                    "simbolo": "YPFD",
+                    "descripcion": "YPF S.A.",
+                    "ultimoPrecio": 32100.0,
+                    "variacionPorcentual": -0.85,
+                    "volumen": 98000,
+                    "puntas": [{"precioCompra": 32000.0, "precioVenta": 32200.0}],
+                    "moneda": "ARS",
+                },
+            ]
+        )
+        client.async_get_serie_historica = AsyncMock(
+            return_value=[
+                {
+                    "fechaHora": "2026-11-01T00:00:00",
+                    "apertura": 5000.0,
+                    "maximo": 5100.0,
+                    "minimo": 4950.0,
+                    "ultimoPrecio": 5050.0,
+                    "volumenNominal": 100000,
+                },
+                {
+                    "fechaHora": "2026-11-17T00:00:00",
+                    "apertura": 5300.0,
+                    "maximo": 5450.0,
+                    "minimo": 5290.0,
+                    "ultimoPrecio": 5420.5,
+                    "volumenNominal": 142050,
+                },
+            ]
+        )
         yield client

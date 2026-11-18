@@ -36,8 +36,15 @@ async def async_setup_entry(
             IOLAccountTotalArsSensor(coordinator),
             IOLAccountTotalUsdMepSensor(coordinator),
             IOLAccountTotalUsdCclSensor(coordinator),
+            IOLDolarMepSensor(coordinator),
+            IOLDolarCclSensor(coordinator),
+            IOLDisponibleArsSensor(coordinator),
+            IOLDisponibleUsdSensor(coordinator),
+            IOLPortafolioGananciaSensor(coordinator),
             IOLInflacionMensualSensor(coordinator),
             IOLInflacionInteranualSensor(coordinator),
+            IOLInflacionMensualUsdSensor(coordinator),
+            IOLInflacionInteranualUsdSensor(coordinator),
             IOLPortfolioSensor(coordinator),
         ]
     )
@@ -364,6 +371,36 @@ class IOLInflacionInteranualSensor(_IOLInflacionBaseSensor):
         )
 
 
+class IOLInflacionMensualUsdSensor(_IOLInflacionBaseSensor):
+    """Sensor representing the latest monthly inflation in Argentina measured in USD MEP."""
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the monthly USD inflation sensor."""
+        super().__init__(
+            coordinator=coordinator,
+            data_key="inflacion_mensual_usd",
+            suffix="inflacion_mensual_usd",
+            name="Inflación Mensual USD",
+            entity_id="sensor.iol_inflacion_mensual_usd",
+            icon="mdi:currency-usd",
+        )
+
+
+class IOLInflacionInteranualUsdSensor(_IOLInflacionBaseSensor):
+    """Sensor representing 12-month accumulated inflation in Argentina measured in USD MEP."""
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the 12-month accumulated USD inflation sensor."""
+        super().__init__(
+            coordinator=coordinator,
+            data_key="inflacion_interanual_usd",
+            suffix="inflacion_interanual_usd",
+            name="Inflación Interanual 12M USD",
+            entity_id="sensor.iol_inflacion_interanual_usd",
+            icon="mdi:calendar-range",
+        )
+
+
 class IOLPortfolioSensor(IOLEntity, SensorEntity):
     """Optional opt-in sensor exposing full portfolio holdings (disabled by default)."""
 
@@ -397,4 +434,155 @@ class IOLPortfolioSensor(IOLEntity, SensorEntity):
             "ganancia_total": data.get("ganancia_total"),
             "distribucion_por_tipo": data.get("distribucion_por_tipo"),
             "activos": data.get("activos", []),
+        }
+
+
+class IOLDolarMepSensor(IOLEntity, SensorEntity):
+    """Sensor representing the resolved Dólar MEP exchange rate in ARS."""
+
+    _attr_name = "Dólar MEP"
+    _attr_native_unit_of_measurement = "ARS"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_icon = "mdi:currency-usd"
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the Dólar MEP rate sensor."""
+        super().__init__(coordinator, "dolar_mep")
+        self.entity_id = "sensor.iol_dolar_mep"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return Dólar MEP rate in ARS."""
+        if not self.coordinator.data:
+            return None
+        return self.coordinator.data.get("dolar_mep")
+
+
+class IOLDolarCclSensor(IOLEntity, SensorEntity):
+    """Sensor representing the resolved Dólar CCL exchange rate in ARS."""
+
+    _attr_name = "Dólar CCL"
+    _attr_native_unit_of_measurement = "ARS"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_icon = "mdi:currency-usd"
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the Dólar CCL rate sensor."""
+        super().__init__(coordinator, "dolar_ccl")
+        self.entity_id = "sensor.iol_dolar_ccl"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return Dólar CCL rate in ARS."""
+        if not self.coordinator.data:
+            return None
+        return self.coordinator.data.get("dolar_ccl")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return CCL resolution source."""
+        if not self.coordinator.data:
+            return {}
+        return {"fuente_ccl": self.coordinator.data.get("fuente_ccl")}
+
+
+class IOLDisponibleArsSensor(IOLEntity, SensorEntity):
+    """Sensor representing liquid available ARS balance."""
+
+    _attr_name = "Disponible ARS"
+    _attr_native_unit_of_measurement = "ARS"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_icon = "mdi:cash"
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the available ARS balance sensor."""
+        super().__init__(coordinator, "disponible_ars")
+        self.entity_id = "sensor.iol_disponible_ars"
+
+    def _account_data(self) -> dict[str, Any]:
+        """Return consolidated account summary."""
+        if not self.coordinator.data:
+            return {}
+        return self.coordinator.data.get("account", {})
+
+    @property
+    def native_value(self) -> float | None:
+        """Return available ARS cash balance."""
+        return self._account_data().get("disponible_pesos")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return committed ARS balance and account number."""
+        data = self._account_data()
+        return {
+            "comprometido": data.get("comprometido_pesos"),
+            "numero_cuenta": data.get("numero_cuenta"),
+        }
+
+
+class IOLDisponibleUsdSensor(IOLEntity, SensorEntity):
+    """Sensor representing liquid available USD balance."""
+
+    _attr_name = "Disponible USD"
+    _attr_native_unit_of_measurement = "USD"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_icon = "mdi:cash-check"
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the available USD balance sensor."""
+        super().__init__(coordinator, "disponible_usd")
+        self.entity_id = "sensor.iol_disponible_usd"
+
+    def _account_data(self) -> dict[str, Any]:
+        """Return consolidated account summary."""
+        if not self.coordinator.data:
+            return {}
+        return self.coordinator.data.get("account", {})
+
+    @property
+    def native_value(self) -> float | None:
+        """Return available USD cash balance."""
+        return self._account_data().get("disponible_dolares")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return committed USD balance and account number."""
+        data = self._account_data()
+        return {
+            "comprometido": data.get("comprometido_dolares"),
+            "numero_cuenta": data.get("numero_cuenta"),
+        }
+
+
+class IOLPortafolioGananciaSensor(IOLEntity, SensorEntity):
+    """Sensor representing total unrealized gain/loss of the portfolio in ARS."""
+
+    _attr_name = "Ganancia Portafolio"
+    _attr_native_unit_of_measurement = "ARS"
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_icon = "mdi:trending-up"
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the portfolio total gain/loss sensor."""
+        super().__init__(coordinator, "portafolio_ganancia")
+        self.entity_id = "sensor.iol_portafolio_ganancia"
+
+    def _portfolio_data(self) -> dict[str, Any]:
+        """Return normalized portfolio dictionary from coordinator."""
+        if not self.coordinator.data:
+            return {}
+        return self.coordinator.data.get("portafolio") or {}
+
+    @property
+    def native_value(self) -> float | None:
+        """Return total portfolio gain/loss in ARS."""
+        return self._portfolio_data().get("ganancia_total")
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return total valued amount and holdings count."""
+        data = self._portfolio_data()
+        return {
+            "total_valorizado": data.get("total_valorizado"),
+            "cantidad_activos": data.get("cantidad_activos"),
         }

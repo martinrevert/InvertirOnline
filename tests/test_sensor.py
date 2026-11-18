@@ -82,6 +82,16 @@ async def test_sensor_account_and_spy(hass: HomeAssistant, mock_iol_api) -> None
     assert inf_i_state.state == "33.13"
     assert inf_i_state.attributes["fuente"] == "ArgentinaDatos"
 
+    inf_m_usd_state = hass.states.get("sensor.iol_inflacion_mensual_usd")
+    assert inf_m_usd_state is not None
+    assert inf_m_usd_state.state == "1.81"
+    assert inf_m_usd_state.attributes["fecha"] == "2026-10-01"
+
+    inf_i_usd_state = hass.states.get("sensor.iol_inflacion_interanual_usd")
+    assert inf_i_usd_state is not None
+    assert inf_i_usd_state.state == "27.34"
+    assert inf_i_usd_state.attributes["fuente"] == "ArgentinaDatos (IPC / Dólar MEP)"
+
 
 async def test_service_get_quote(hass: HomeAssistant, mock_iol_api) -> None:
     """Test invertironline.get_quote service returns structured payload for Assist."""
@@ -164,3 +174,99 @@ async def test_service_get_portfolio_and_opt_in_sensor(
     )
     assert filtered["cantidad_activos"] == 1
     assert filtered["activos"][0]["simbolo"] == "SPY"
+
+
+async def test_phase1_derived_sensors_and_binary_sensor(
+    hass: HomeAssistant, mock_iol_api
+) -> None:
+    """Test Phase 1 derived sensors (MEP, CCL, cash, portfolio gain) and binary sensor."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="InvertirOnline (987654)",
+        data={CONF_USERNAME: "usuario_iol", CONF_PASSWORD: "secret_password"},
+        unique_id="iol_987654",
+    )
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    mep_rate = hass.states.get("sensor.iol_dolar_mep")
+    assert mep_rate is not None
+    assert mep_rate.state == "1150.0"
+
+    ccl_rate = hass.states.get("sensor.iol_dolar_ccl")
+    assert ccl_rate is not None
+    assert ccl_rate.state == "1200.0"
+    assert ccl_rate.attributes["fuente_ccl"] == "api_directa"
+
+    disp_ars = hass.states.get("sensor.iol_disponible_ars")
+    assert disp_ars is not None
+    assert disp_ars.state == "500000.0"
+    assert disp_ars.attributes["numero_cuenta"] == "987654"
+
+    disp_usd = hass.states.get("sensor.iol_disponible_usd")
+    assert disp_usd is not None
+    assert disp_usd.state == "250.0"
+
+    gain = hass.states.get("sensor.iol_portafolio_ganancia")
+    assert gain is not None
+    assert gain.state == "150000.0"
+    assert gain.attributes["total_valorizado"] == 2000000.0
+    assert gain.attributes["cantidad_activos"] == 2
+
+    market_open = hass.states.get("binary_sensor.iol_mercado_abierto")
+    assert market_open is not None
+    assert market_open.state in ("on", "off")
+    assert "horario_rueda" in market_open.attributes
+
+
+async def test_phase2_assist_services(hass: HomeAssistant, mock_iol_api) -> None:
+    """Test get_operations, get_market_panel, and get_historical_quotes services."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="InvertirOnline (987654)",
+        data={CONF_USERNAME: "usuario_iol", CONF_PASSWORD: "secret_password"},
+        unique_id="iol_987654",
+    )
+    entry.add_to_hass(hass)
+
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    ops = await hass.services.async_call(
+        DOMAIN,
+        "get_operations",
+        {"estado": "terminadas"},
+        blocking=True,
+        return_response=True,
+    )
+    assert ops["cantidad"] == 1
+    assert ops["operaciones"][0]["simbolo"] == "AL30"
+
+    panel = await hass.services.async_call(
+        DOMAIN,
+        "get_market_panel",
+        {"instrumento": "Acciones", "panel": "Merval"},
+        blocking=True,
+        return_response=True,
+    )
+    assert panel["total_instrumentos"] == 2
+    assert panel["titulos"][0]["simbolo"] == "GGAL"
+
+    hist = await hass.services.async_call(
+        DOMAIN,
+        "get_historical_quotes",
+        {
+            "simbolo": "GGAL",
+            "fecha_desde": "2026-11-01",
+            "fecha_hasta": "2026-11-17",
+        },
+        blocking=True,
+        return_response=True,
+    )
+    assert hist["cantidad_ruedas"] == 2
+    assert hist["precio_inicial"] == 5050.0
+    assert hist["precio_final"] == 5420.5
+    assert hist["maximo_periodo"] == 5450.0
+    assert hist["minimo_periodo"] == 4950.0

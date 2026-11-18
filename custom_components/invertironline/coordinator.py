@@ -23,8 +23,13 @@ from .api import (
     safe_float,
 )
 from .const import (
+    ARGENTINADATOS_DOLAR_MEP_URL,
     ARGENTINADATOS_INFLACION_INTERANUAL_URL,
     ARGENTINADATOS_INFLACION_MENSUAL_URL,
+    BYMA_CLOSE_HOUR,
+    BYMA_CLOSE_MINUTE,
+    BYMA_OPEN_HOUR,
+    BYMA_OPEN_MINUTE,
     CAUCION_TERM_WINDOWS,
     CAUCION_TERMS,
     CONF_EXTRA_TICKERS,
@@ -305,6 +310,8 @@ def _extract_account_summary(
     numero_cuenta = None
     disponible_pesos = 0.0
     disponible_dolares = 0.0
+    comprometido_pesos = 0.0
+    comprometido_dolares = 0.0
     total_ars_estado = safe_float(estado_cuenta.get("totalEnPesos"))
 
     cuentas = estado_cuenta.get("cuentas")
@@ -317,10 +324,13 @@ def _extract_account_summary(
 
             moneda = str(cuenta.get("moneda") or "").lower()
             disponible = safe_float(cuenta.get("disponible")) or 0.0
+            comprometido = safe_float(cuenta.get("comprometido")) or 0.0
             if "peso" in moneda or "ars" in moneda:
                 disponible_pesos += disponible
+                comprometido_pesos += comprometido
             elif "dolar" in moneda or "usd" in moneda:
                 disponible_dolares += disponible
+                comprometido_dolares += comprometido
 
     if numero_cuenta is None and estado_cuenta.get("numeroCuenta") is not None:
         numero_cuenta = str(estado_cuenta.get("numeroCuenta"))
@@ -344,6 +354,8 @@ def _extract_account_summary(
         "numero_cuenta": numero_cuenta or "default",
         "disponible_pesos": round(disponible_pesos, 2),
         "disponible_dolares": round(disponible_dolares, 2),
+        "comprometido_pesos": round(comprometido_pesos, 2),
+        "comprometido_dolares": round(comprometido_dolares, 2),
         "tenencia_titulos_pesos": round(tenencia_titulos_pesos, 2),
         "total_ars": round(total_ars, 2),
     }
@@ -469,6 +481,220 @@ def is_within_market_window(now: datetime | None = None) -> bool:
     open_time = dt_time(MARKET_OPEN_HOUR, MARKET_OPEN_MINUTE)
     close_time = dt_time(MARKET_CLOSE_HOUR, MARKET_CLOSE_MINUTE)
     return open_time <= current_time <= close_time
+
+
+def is_byma_market_open(now: datetime | None = None) -> bool:
+    """Return True during regular BYMA trading hours (Mon-Fri 11:00-17:00 ART)."""
+    tz = ZoneInfo(MARKET_TIMEZONE)
+    current = now.astimezone(tz) if now is not None else datetime.now(tz)
+    if current.weekday() >= 5:
+        return False
+    current_time = current.time()
+    open_time = dt_time(BYMA_OPEN_HOUR, BYMA_OPEN_MINUTE)
+    close_time = dt_time(BYMA_CLOSE_HOUR, BYMA_CLOSE_MINUTE)
+    return open_time <= current_time <= close_time
+
+
+def normalize_operations(
+    raw: list[dict[str, Any]], limit: int = 20
+) -> dict[str, Any]:
+    """Normalize IOL operations list into a compact response for Assist."""
+    items: list[dict[str, Any]] = []
+    for op in raw[: max(1, limit)]:
+        if not isinstance(op, dict):
+            continue
+        items.append(
+            {
+                "numero": op.get("numero"),
+                "simbolo": op.get("simbolo"),
+                "tipo": op.get("tipo"),
+                "estado": op.get("estado"),
+                "mercado": op.get("mercado"),
+                "cantidad": safe_float(op.get("cantidad")),
+                "precio": safe_float(op.get("precio")),
+                "monto": safe_float(op.get("monto")),
+                "fecha_orden": op.get("fechaOrden"),
+                "fecha_operada": op.get("fechaOperada"),
+            }
+        )
+    return {
+        "cantidad": len(items),
+        "total_disponibles": len(raw),
+        "operaciones": items,
+    }
+
+
+def normalize_market_panel(
+    raw: list[dict[str, Any]],
+    instrumento: str,
+    panel: str,
+    pais: str = "Argentina",
+    sort_by: str = "variacion_desc",
+    limit: int = 20,
+) -> dict[str, Any]:
+    """Normalize and sort a market quote panel for Assist queries."""
+    parsed: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        bid, ask = _extract_puntas(item)
+        parsed.append(
+            {
+                "simbolo": item.get("simbolo"),
+                "descripcion": item.get("descripcion") or item.get("descripcionTitulo"),
+                "ultimo_precio": safe_float(item.get("ultimoPrecio")),
+                "variacion_diaria": safe_float(
+                    item.get("variacionPorcentual")
+                    if item.get("variacionPorcentual") is not None
+                    else item.get("variacion")
+                ),
+                "volumen_nominal": safe_float(
+                    item.get("volumen") or item.get("volumenNominal")
+                ),
+                "punta_compradora": bid,
+                "punta_vendedora": ask,
+                "moneda": item.get("moneda"),
+            }
+        )
+
+    if sort_by == "variacion_asc":
+        parsed.sort(
+            key=lambda x: x["variacion_diaria"] if x["variacion_diaria"] is not None else float("inf")
+        )
+    elif sort_by == "volumen_desc":
+        parsed.sort(
+            key=lambda x: x["volumen_nominal"] if x["volumen_nominal"] is not None else -1.0,
+            reverse=True,
+        )
+    else:
+        parsed.sort(
+            key=lambda x: x["variacion_diaria"] if x["variacion_diaria"] is not None else float("-inf"),
+            reverse=True,
+        )
+
+    limited = parsed[: max(1, limit)]
+    return {
+        "instrumento": instrumento,
+        "panel": panel,
+        "pais": pais,
+        "total_instrumentos": len(parsed),
+        "cantidad_mostrada": len(limited),
+        "titulos": limited,
+    }
+
+
+def normalize_historical_series(
+    raw: list[dict[str, Any]],
+    simbolo: str,
+    mercado: str,
+) -> dict[str, Any]:
+    """Normalize historical OHLCV bars and compute period summary stats."""
+    bars: list[dict[str, Any]] = []
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        bars.append(
+            {
+                "fecha": entry.get("fechaHora") or entry.get("fecha"),
+                "apertura": safe_float(entry.get("apertura")),
+                "maximo": safe_float(entry.get("maximo")),
+                "minimo": safe_float(entry.get("minimo")),
+                "ultimo_precio": safe_float(entry.get("ultimoPrecio")),
+                "volumen": safe_float(entry.get("volumenNominal") or entry.get("volumen")),
+            }
+        )
+
+    bars.sort(key=lambda b: str(b.get("fecha") or ""))
+    prices = [b["ultimo_precio"] for b in bars if b["ultimo_precio"] is not None]
+    highs = [b["maximo"] for b in bars if b["maximo"] is not None]
+    lows = [b["minimo"] for b in bars if b["minimo"] is not None]
+
+    precio_inicial = prices[0] if prices else None
+    precio_final = prices[-1] if prices else None
+    variacion_pct = (
+        round(((precio_final - precio_inicial) / precio_inicial) * 100, 2)
+        if precio_inicial and precio_final is not None and precio_inicial > 0
+        else None
+    )
+
+    return {
+        "simbolo": simbolo.upper(),
+        "mercado": mercado,
+        "cantidad_ruedas": len(bars),
+        "precio_inicial": precio_inicial,
+        "precio_final": precio_final,
+        "variacion_periodo_pct": variacion_pct,
+        "maximo_periodo": max(highs) if highs else None,
+        "minimo_periodo": min(lows) if lows else None,
+        "serie": bars,
+    }
+
+
+def _shift_year_month(ym: str, delta_months: int) -> str | None:
+    """Shift a YYYY-MM string by delta_months."""
+    try:
+        year_str, month_str = ym.split("-")
+        total = int(year_str) * 12 + (int(month_str) - 1) + delta_months
+        new_year, new_month_idx = divmod(total, 12)
+        return f"{new_year:04d}-{new_month_idx + 1:02d}"
+    except (ValueError, AttributeError):
+        return None
+
+
+def compute_usd_inflation(
+    inflacion_data: dict[str, Any] | None,
+    dolar_historico: list[dict[str, Any]] | None,
+    lookback_months: int,
+) -> dict[str, Any] | None:
+    """Compute inflation in USD by adjusting ARS IPC with Dólar MEP variation."""
+    if not inflacion_data or not dolar_historico:
+        return None
+
+    sorted_fx = sorted(
+        (item for item in dolar_historico if isinstance(item, dict) and item.get("fecha")),
+        key=lambda x: str(x.get("fecha")),
+    )
+    month_close: dict[str, float] = {}
+    for item in sorted_fx:
+        ym = str(item.get("fecha"))[:7]
+        rate = safe_float(
+            item.get("venta") if item.get("venta") is not None else item.get("compra")
+        )
+        if len(ym) == 7 and rate is not None and rate > 0:
+            month_close[ym] = rate
+
+    def _calc(ipc_pct: Any, fecha_str: Any) -> float | None:
+        ipc_val = safe_float(ipc_pct)
+        if ipc_val is None or not fecha_str:
+            return None
+        end_ym = str(fecha_str)[:7]
+        start_ym = _shift_year_month(end_ym, -lookback_months)
+        if not start_ym:
+            return None
+        d_end = month_close.get(end_ym)
+        d_start = month_close.get(start_ym)
+        if not d_end or not d_start or d_start <= 0:
+            return None
+        dolar_var = (d_end / d_start) - 1.0
+        if 1.0 + dolar_var <= 0:
+            return None
+        usd_inf = ((1.0 + ipc_val / 100.0) / (1.0 + dolar_var) - 1.0) * 100.0
+        return round(usd_inf, 2)
+
+    fecha = inflacion_data.get("fecha")
+    valor_usd = _calc(inflacion_data.get("valor"), fecha)
+    if valor_usd is None:
+        return None
+
+    fecha_ant = inflacion_data.get("fecha_anterior")
+    valor_ant_usd = _calc(inflacion_data.get("valor_anterior"), fecha_ant)
+    return {
+        "valor": valor_usd,
+        "fecha": fecha,
+        "valor_anterior": valor_ant_usd,
+        "fecha_anterior": fecha_ant,
+        "fuente": "ArgentinaDatos (IPC / Dólar MEP)",
+    }
 
 
 class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -726,24 +952,36 @@ class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # ArgentinaDatos inflation (refreshed at most once every INFLACION_CACHE_HOURS)
         inflacion_mensual = previous_data.get("inflacion_mensual")
         inflacion_interanual = previous_data.get("inflacion_interanual")
+        inflacion_mensual_usd = previous_data.get("inflacion_mensual_usd")
+        inflacion_interanual_usd = previous_data.get("inflacion_interanual_usd")
         now_utc = datetime.now(ZoneInfo("UTC"))
         should_fetch_inflacion = (
             self._last_inflacion_fetch is None
             or inflacion_mensual is None
             or inflacion_interanual is None
+            or inflacion_mensual_usd is None
+            or inflacion_interanual_usd is None
             or (now_utc - self._last_inflacion_fetch)
             >= timedelta(hours=INFLACION_CACHE_HOURS)
         )
         if should_fetch_inflacion:
-            inf_m_res, inf_i_res = await asyncio.gather(
+            inf_m_res, inf_i_res, dolar_hist_res = await asyncio.gather(
                 self.api.async_get_inflacion(ARGENTINADATOS_INFLACION_MENSUAL_URL),
                 self.api.async_get_inflacion(ARGENTINADATOS_INFLACION_INTERANUAL_URL),
+                self.api.async_get_dolar_historico(ARGENTINADATOS_DOLAR_MEP_URL),
                 return_exceptions=True,
             )
             if isinstance(inf_m_res, dict):
                 inflacion_mensual = inf_m_res
             if isinstance(inf_i_res, dict):
                 inflacion_interanual = inf_i_res
+            if isinstance(dolar_hist_res, list):
+                m_usd = compute_usd_inflation(inflacion_mensual, dolar_hist_res, 1)
+                if m_usd is not None:
+                    inflacion_mensual_usd = m_usd
+                i_usd = compute_usd_inflation(inflacion_interanual, dolar_hist_res, 12)
+                if i_usd is not None:
+                    inflacion_interanual_usd = i_usd
             if isinstance(inf_m_res, dict) or isinstance(inf_i_res, dict):
                 self._last_inflacion_fetch = now_utc
 
@@ -760,4 +998,6 @@ class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "extra_tickers": extra_quotes,
             "inflacion_mensual": inflacion_mensual,
             "inflacion_interanual": inflacion_interanual,
+            "inflacion_mensual_usd": inflacion_mensual_usd,
+            "inflacion_interanual_usd": inflacion_interanual_usd,
         }

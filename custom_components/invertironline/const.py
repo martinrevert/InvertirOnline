@@ -18,6 +18,12 @@ MARKET_OPEN_MINUTE = 30
 MARKET_CLOSE_HOUR = 18
 MARKET_CLOSE_MINUTE = 30
 
+# BYMA regular trading session hours (America/Argentina/Buenos_Aires, Mon-Fri)
+BYMA_OPEN_HOUR = 11
+BYMA_OPEN_MINUTE = 0
+BYMA_CLOSE_HOUR = 17
+BYMA_CLOSE_MINUTE = 0
+
 # Configuration & Options keys
 CONF_EXTRA_TICKERS = "extra_tickers"
 CONF_SCAN_INTERVAL = "scan_interval_minutes"
@@ -46,6 +52,12 @@ ENDPOINT_DOLAR_COTIZACIONES = "/api/v2/Cotizaciones/Dolar"
 ENDPOINT_ESTADO_CUENTA = "/api/v2/estadocuenta"
 ENDPOINT_PORTAFOLIO = "/api/v2/portafolio/Argentina"
 ENDPOINT_COTIZACION_TITULO = "/api/v2/{mercado}/Titulos/{simbolo}/Cotizacion"
+ENDPOINT_OPERACIONES = "/api/v2/operaciones"
+ENDPOINT_PANEL_COTIZACIONES = "/api/v2/Cotizaciones/{instrumento}/{panel}/{pais}"
+ENDPOINT_SERIE_HISTORICA = (
+    "/api/v2/{mercado}/Titulos/{simbolo}/Cotizacion/seriehistorica/"
+    "{fecha_desde}/{fecha_hasta}/{ajustada}"
+)
 
 # ArgentinaDatos public macro endpoints (Read-Only, no IOL quota usage)
 ARGENTINADATOS_INFLACION_MENSUAL_URL = (
@@ -53,5 +65,8 @@ ARGENTINADATOS_INFLACION_MENSUAL_URL = (
 )
 ARGENTINADATOS_INFLACION_INTERANUAL_URL = (
     "https://api.argentinadatos.com/v1/finanzas/indices/inflacionInteranual"
+)
+ARGENTINADATOS_DOLAR_MEP_URL = (
+    "https://api.argentinadatos.com/v1/cotizaciones/dolares/bolsa"
 )
 INFLACION_CACHE_HOURS = 12

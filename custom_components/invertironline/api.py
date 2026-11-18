@@ -20,7 +20,10 @@ from .const import (
     ENDPOINT_DOLAR_COTIZACIONES,
     ENDPOINT_DOLAR_MEP,
     ENDPOINT_ESTADO_CUENTA,
+    ENDPOINT_OPERACIONES,
+    ENDPOINT_PANEL_COTIZACIONES,
     ENDPOINT_PORTAFOLIO,
+    ENDPOINT_SERIE_HISTORICA,
     ENDPOINT_TOKEN,
     REQUEST_TIMEOUT_SECONDS,
     TOKEN_REFRESH_MARGIN_SECONDS,
@@ -185,7 +188,10 @@ class IOLApiClient:
             return self._access_token
 
     async def _async_get(
-        self, endpoint: str, retry_on_401: bool = True
+        self,
+        endpoint: str,
+        retry_on_401: bool = True,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         """Perform an authenticated GET request to the IOL API."""
         token = await self.async_ensure_valid_token()
@@ -196,6 +202,7 @@ class IOLApiClient:
             async with self._session.get(
                 url,
                 headers={"Authorization": f"Bearer {token}"},
+                params=params,
                 timeout=timeout,
             ) as response:
                 if response.status == 401:
@@ -203,7 +210,9 @@ class IOLApiClient:
                         _LOGGER.debug("Received HTTP 401 from %s, refreshing token", endpoint)
                         async with self._token_lock:
                             await self.async_refresh_token()
-                        return await self._async_get(endpoint, retry_on_401=False)
+                        return await self._async_get(
+                            endpoint, retry_on_401=False, params=params
+                        )
                     raise IOLAuthError(
                         f"Unauthorized request to {endpoint} after token refresh"
                     )
@@ -356,6 +365,75 @@ class IOLApiClient:
         data = await self._async_get(endpoint)
         return data if isinstance(data, dict) else {}
 
+    async def async_get_operaciones(
+        self,
+        estado: str | None = None,
+        fecha_desde: str | None = None,
+        fecha_hasta: str | None = None,
+        pais: str = "argentina",
+    ) -> list[dict[str, Any]]:
+        """Fetch account operations/orders history (read-only)."""
+        params: dict[str, str] = {"filtro.pais": (pais or "argentina").strip().lower()}
+        if estado:
+            params["filtro.estado"] = estado.strip().lower()
+        if fecha_desde:
+            params["filtro.fechaDesde"] = fecha_desde.strip()
+        if fecha_hasta:
+            params["filtro.fechaHasta"] = fecha_hasta.strip()
+
+        data = await self._async_get(ENDPOINT_OPERACIONES, params=params)
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        if isinstance(data, dict):
+            for key in ("operaciones", "items", "data"):
+                nested = data.get(key)
+                if isinstance(nested, list):
+                    return [item for item in nested if isinstance(item, dict)]
+        return []
+
+    async def async_get_panel_cotizaciones(
+        self,
+        instrumento: str,
+        panel: str,
+        pais: str = "Argentina",
+    ) -> list[dict[str, Any]]:
+        """Fetch a full market quote panel (e.g., Acciones/Merval/Argentina)."""
+        endpoint = ENDPOINT_PANEL_COTIZACIONES.format(
+            instrumento=instrumento.strip(),
+            panel=panel.strip(),
+            pais=(pais or "Argentina").strip(),
+        )
+        data = await self._async_get(endpoint)
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        if isinstance(data, dict):
+            titulos = data.get("titulos")
+            if isinstance(titulos, list):
+                return [item for item in titulos if isinstance(item, dict)]
+        return []
+
+    async def async_get_serie_historica(
+        self,
+        simbolo: str,
+        fecha_desde: str,
+        fecha_hasta: str,
+        mercado: str = DEFAULT_MARKET,
+        ajustada: str = "ajustada",
+    ) -> list[dict[str, Any]]:
+        """Fetch historical OHLCV quote series for a security."""
+        clean_ajustada = "sinAjustar" if str(ajustada).strip().lower() in ("sinajustar", "sin_ajustar") else "ajustada"
+        endpoint = ENDPOINT_SERIE_HISTORICA.format(
+            mercado=(mercado or DEFAULT_MARKET).strip(),
+            simbolo=simbolo.strip().upper(),
+            fecha_desde=fecha_desde.strip(),
+            fecha_hasta=fecha_hasta.strip(),
+            ajustada=clean_ajustada,
+        )
+        data = await self._async_get(endpoint)
+        if isinstance(data, list):
+            return [item for item in data if isinstance(item, dict)]
+        return []
+
     async def async_get_inflacion(self, url: str) -> dict[str, Any] | None:
         """Fetch inflation time series from ArgentinaDatos and return latest entry."""
         timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT_SECONDS)
@@ -398,6 +476,31 @@ class IOLApiClient:
             "fecha_anterior": previous.get("fecha"),
             "fuente": "ArgentinaDatos",
         }
+
+    async def async_get_dolar_historico(
+        self, url: str
+    ) -> list[dict[str, Any]] | None:
+        """Fetch historical dollar quotes list from ArgentinaDatos."""
+        timeout = aiohttp.ClientTimeout(total=REQUEST_TIMEOUT_SECONDS)
+        try:
+            async with self._session.get(url, timeout=timeout) as response:
+                if response.status != 200:
+                    _LOGGER.warning(
+                        "ArgentinaDatos dollar endpoint %s returned HTTP %s",
+                        url,
+                        response.status,
+                    )
+                    return None
+                payload = await response.json(content_type=None)
+        except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as err:
+            _LOGGER.warning(
+                "Failed to fetch ArgentinaDatos dollar series (%s): %s", url, err
+            )
+            return None
+
+        if not isinstance(payload, list) or not payload:
+            return None
+        return [item for item in payload if isinstance(item, dict)]
 
 
 def safe_float(value: Any) -> float | None:
