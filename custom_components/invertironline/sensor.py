@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -12,10 +14,15 @@ from homeassistant.components.sensor import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CAUCION_TERMS, CONF_EXTRA_TICKERS, DEFAULT_MARKET
-from .coordinator import IOLDataUpdateCoordinator, parse_extra_tickers
+from .const import CAUCION_TERMS, CONF_EXTRA_TICKERS, DEFAULT_MARKET, MARKET_TIMEZONE
+from .coordinator import (
+    IOLDataUpdateCoordinator,
+    is_within_market_window,
+    parse_extra_tickers,
+)
 from .entity import IOLEntity
 
 
@@ -45,12 +52,22 @@ async def async_setup_entry(
             IOLInflacionInteranualSensor(coordinator),
             IOLInflacionMensualUsdSensor(coordinator),
             IOLInflacionInteranualUsdSensor(coordinator),
+            IOLUltimaActualizacionSensor(coordinator),
             IOLPortfolioSensor(coordinator),
         ]
     )
 
+    extra_entities: list[IOLExtraTickerSensor] = []
     for mercado, simbolo in parse_extra_tickers(entry.options.get(CONF_EXTRA_TICKERS)):
-        entities.append(IOLExtraTickerSensor(coordinator, mercado, simbolo))
+        extra_entities.append(IOLExtraTickerSensor(coordinator, mercado, simbolo))
+    entities.extend(extra_entities)
+
+    # Remove orphaned extra-ticker entities no longer present in OptionsFlow
+    ent_reg = er.async_get(hass)
+    active_ticker_uids = {e.unique_id for e in extra_entities if e.unique_id}
+    for reg_entry in er.async_entries_for_config_entry(ent_reg, entry.entry_id):
+        if "_ticker_" in reg_entry.unique_id and reg_entry.unique_id not in active_ticker_uids:
+            ent_reg.async_remove(reg_entry.entity_id)
 
     async_add_entities(entities)
 
@@ -585,4 +602,38 @@ class IOLPortafolioGananciaSensor(IOLEntity, SensorEntity):
         return {
             "total_valorizado": data.get("total_valorizado"),
             "cantidad_activos": data.get("cantidad_activos"),
+        }
+
+
+class IOLUltimaActualizacionSensor(IOLEntity, SensorEntity):
+    """Timestamp sensor indicating the exact date/time of the last real IOL API poll."""
+
+    _attr_name = "Última Actualización"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_icon = "mdi:clock-outline"
+
+    def __init__(self, coordinator: IOLDataUpdateCoordinator) -> None:
+        """Initialize the last-update timestamp sensor."""
+        super().__init__(coordinator, "ultima_actualizacion")
+        self.entity_id = "sensor.iol_ultima_actualizacion"
+
+    @property
+    def native_value(self) -> datetime | None:
+        """Return timezone-aware datetime of the last real IOL API update."""
+        if not self.coordinator.data:
+            return None
+        val = self.coordinator.data.get("ultima_actualizacion")
+        return val if isinstance(val, datetime) else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return local ISO timestamp and polling window status."""
+        dt = self.native_value
+        return {
+            "fecha_hora_local": (
+                dt.astimezone(ZoneInfo(MARKET_TIMEZONE)).isoformat(timespec="seconds")
+                if dt is not None
+                else None
+            ),
+            "en_ventana_sondeo": is_within_market_window(),
         }

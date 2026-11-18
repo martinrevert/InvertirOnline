@@ -11,6 +11,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import IOLApiClient, IOLApiError, IOLAuthError, IOLConnectionError
 from .const import DOMAIN
 from .coordinator import IOLDataUpdateCoordinator
+from .frontend import async_register_frontend
 from .services import async_register_services, async_unregister_services
 
 PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
@@ -46,6 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_register_services(hass)
+    await async_register_frontend(hass)
 
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
     return True

@@ -31,6 +31,7 @@ Al configurar tu cuenta se crea un dispositivo `InvertirOnline (<N° de cuenta>)
 | `sensor.iol_disponible_usd` | Saldo líquido disponible en dólares | `USD` | `comprometido`, `numero_cuenta` |
 | `sensor.iol_portafolio_ganancia` | Ganancia/pérdida total no realizada del portafolio | `ARS` | `total_valorizado`, `cantidad_activos` |
 | `binary_sensor.iol_mercado_abierto` | Indica si la rueda regular BYMA está abierta (Lun–Vie 11:00–17:00 ART) | — | `en_ventana_sondeo`, `horario_rueda`, `horario_sondeo` |
+| `sensor.iol_ultima_actualizacion` | Fecha y hora exacta de la última consulta real a la API de IOL | `timestamp` | `fecha_hora_local`, `en_ventana_sondeo` |
 
 ---
 
@@ -69,10 +70,27 @@ En el mercado argentino (BYMA), cuando un día es viernes o previo a un feriado,
 
 Podés agregar sensores fijos para otros activos sin tocar YAML:
 1. Ve a **Ajustes → Dispositivos y servicios → InvertirOnline (IOL) → Configurar**.
-2. En **Tickers adicionales**, escribí los símbolos separados por coma:
-   - Bolsa local (`bCBA` por defecto): `GGAL, AL30, YPFD`
-   - Mercados del exterior: `NYSE:AAPL, NASDAQ:NVDA`
-3. Opcionalmente ajustá el intervalo de actualización (`>= 15` minutos) y guardá. La integración se recargará automáticamente creando los nuevos sensores `sensor.iol_ticker_<simbolo>`.
+2. En **Tickers adicionales**, escribí los símbolos separados por coma según el mercado:
+   - **Bolsa argentina (`bCBA`, por defecto — CEDEARs, Acciones y Bonos en ARS):** escribí solo el símbolo (ej. `NVDA, GGAL, AL30, YPFD`) o explícitamente `bCBA:NVDA`.
+   - **CEDEARs y Bonos en dólares (MEP / CCL):** agregá `D` o `C` al final del símbolo local (ej. `NVDAD, AL30D, AL30C`).
+   - **Acciones originales de EE.UU. (en USD):** anteponé el mercado `NYSE:` o `NASDAQ:` (ej. `NYSE:KO, NASDAQ:AAPL, NASDAQ:NVDA`).
+3. Opcionalmente ajustá el intervalo de actualización (`>= 15` minutos) y guardá. La integración se recargará automáticamente creando los nuevos sensores `sensor.iol_ticker_<simbolo>` (y limpiando los que hayas quitado).
+
+---
+
+## Tarjeta LED Marquee Prearmada (`invertironline-ticker-card`)
+
+La integración registra automáticamente una tarjeta Lovelace estilo marquesina LED de Wall Street (`custom:invertironline-ticker-card`), sin necesidad de instalar recursos manuales:
+
+```yaml
+type: custom:invertironline-ticker-card
+title: INVERTIRONLINE • BYMA
+speed: 35
+show_header: true
+```
+
+* Detecta automáticamente tus sensores `sensor.iol_*` (incluidos los `extra_tickers`) y actualiza los valores en tiempo real con cada refresco del coordinador sin reiniciar el desplazamiento.
+* Podés pasarle una lista opcional `entities:` si querés mostrar solo ciertos activos.
 
 ---
 

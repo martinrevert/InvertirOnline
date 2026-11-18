@@ -32,10 +32,14 @@
     "step": {
       "init": {
         "title": "Opciones de InvertirOnline",
-        "description": "Configurá tickers adicionales como sensores fijos (separados por coma, ej. GGAL, AL30, NYSE:AAPL) y el intervalo de actualización (mínimo 15 minutos).",
+        "description": "Configurá tickers adicionales como sensores fijos (separados por coma) y el intervalo de actualización (mínimo 15 minutos).",
         "data": {
           "extra_tickers": "Tickers adicionales",
           "scan_interval_minutes": "Intervalo de actualización (minutos)"
+        },
+        "data_description": {
+          "extra_tickers": "Separados por coma. Bolsa argentina / CEDEARs / Bonos (bCBA por defecto): escribí solo el símbolo (ej. NVDA, GGAL, AL30, YPFD) o bCBA:NVDA. Para cotización en USD MEP/CCL usá D o C al final (ej. NVDAD, AL30D, AL30C). Acciones de EE.UU. en USD: anteponé NYSE: o NASDAQ: (ej. NYSE:KO, NASDAQ:AAPL).",
+          "scan_interval_minutes": "Mínimo 15 minutos para proteger la cuota mensual de 25.000 llamadas de la API de IOL."
         }
       }
     },

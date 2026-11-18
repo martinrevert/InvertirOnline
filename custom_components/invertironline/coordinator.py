@@ -51,6 +51,29 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
+_MARKET_CANONICAL: dict[str, str] = {
+    "bcba": "bCBA",
+    "nyse": "NYSE",
+    "nasdaq": "NASDAQ",
+}
+
+
+def _normalize_market(mercado: str) -> str:
+    """Normalize market code casing (e.g. BCBA -> bCBA)."""
+    clean = (mercado or DEFAULT_MARKET).strip()
+    return _MARKET_CANONICAL.get(clean.lower(), clean or DEFAULT_MARKET)
+
+
+def _normalize_currency(moneda: Any, mercado: str) -> str:
+    """Normalize IOL currency strings to ISO 4217 codes."""
+    text = str(moneda or "").strip().lower()
+    if "peso" in text or text == "ars":
+        return "ARS"
+    if "dolar" in text or "dólar" in text or text == "usd":
+        return "USD"
+    return "ARS" if mercado == DEFAULT_MARKET else "USD"
+
+
 def parse_extra_tickers(raw_tickers: list[str] | str | None) -> list[tuple[str, str]]:
     """Parse configured extra tickers into (mercado, simbolo) tuples."""
     if not raw_tickers:
@@ -64,8 +87,8 @@ def parse_extra_tickers(raw_tickers: list[str] | str | None) -> list[tuple[str, 
     seen: set[tuple[str, str]] = set()
     for item in items:
         if ":" in item:
-            mercado, simbolo = item.split(":", 1)
-            mercado = mercado.strip() or DEFAULT_MARKET
+            mercado_raw, simbolo = item.split(":", 1)
+            mercado = _normalize_market(mercado_raw)
             simbolo = simbolo.strip().upper()
         else:
             mercado = DEFAULT_MARKET
@@ -111,7 +134,7 @@ def normalize_quote(
         "mercado": mercado,
         "descripcion": raw.get("descripcionTitulo") or raw.get("descripcion") or simbolo.upper(),
         "ultimo_precio": round(ultimo, 2) if ultimo is not None else None,
-        "moneda": raw.get("moneda") or ("ARS" if mercado == DEFAULT_MARKET else "USD"),
+        "moneda": _normalize_currency(raw.get("moneda"), mercado),
         "variacion_diaria": safe_float(
             raw.get("variacion")
             if raw.get("variacion") is not None
@@ -1000,4 +1023,5 @@ class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "inflacion_interanual": inflacion_interanual,
             "inflacion_mensual_usd": inflacion_mensual_usd,
             "inflacion_interanual_usd": inflacion_interanual_usd,
+            "ultima_actualizacion": datetime.now(ZoneInfo(MARKET_TIMEZONE)),
         }

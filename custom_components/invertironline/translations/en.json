@@ -32,10 +32,14 @@
     "step": {
       "init": {
         "title": "InvertirOnline Options",
-        "description": "Configure additional fixed ticker sensors (comma-separated, e.g. GGAL, AL30, NYSE:AAPL) and the polling interval (minimum 15 minutes).",
+        "description": "Configure additional fixed ticker sensors (comma-separated) and the polling interval (minimum 15 minutes).",
         "data": {
           "extra_tickers": "Additional tickers",
           "scan_interval_minutes": "Update interval (minutes)"
+        },
+        "data_description": {
+          "extra_tickers": "Comma-separated. Argentine market / CEDEARs / Bonds (bCBA by default): enter just the symbol (e.g. NVDA, GGAL, AL30, YPFD) or bCBA:NVDA. For USD MEP/CCL quotes append D or C (e.g. NVDAD, AL30D, AL30C). US stocks in USD: prefix with NYSE: or NASDAQ: (e.g. NYSE:KO, NASDAQ:AAPL).",
+          "scan_interval_minutes": "Minimum 15 minutes to stay within IOL's 25,000 monthly API calls quota."
         }
       }
     },

@@ -220,6 +220,11 @@ async def test_phase1_derived_sensors_and_binary_sensor(
     assert market_open.state in ("on", "off")
     assert "horario_rueda" in market_open.attributes
 
+    last_upd = hass.states.get("sensor.iol_ultima_actualizacion")
+    assert last_upd is not None
+    assert last_upd.state not in ("unknown", "unavailable")
+    assert last_upd.attributes["fecha_hora_local"] is not None
+
 
 async def test_phase2_assist_services(hass: HomeAssistant, mock_iol_api) -> None:
     """Test get_operations, get_market_panel, and get_historical_quotes services."""

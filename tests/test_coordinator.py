@@ -137,3 +137,47 @@ async def test_coordinator_market_window_and_skip(hass: HomeAssistant, mock_iol_
 
     assert result == {"cached": True}
     mock_iol_api.async_ensure_valid_token.assert_not_called()
+
+
+async def test_coordinator_expired_refresh_token_falls_back_to_password() -> None:
+    """Test that an expired refresh_token (HTTP 400) falls back to grant_type=password."""
+    resp_400 = MagicMock()
+    resp_400.status = 400
+
+    resp_200 = MagicMock()
+    resp_200.status = 200
+    resp_200.json = AsyncMock(
+        return_value={
+            "access_token": "fresh_password_token",
+            "refresh_token": "fresh_refresh_token",
+            "expires_in": 900,
+        }
+    )
+
+    ctx_400 = MagicMock()
+    ctx_400.__aenter__ = AsyncMock(return_value=resp_400)
+    ctx_400.__aexit__ = AsyncMock(return_value=False)
+
+    ctx_200 = MagicMock()
+    ctx_200.__aenter__ = AsyncMock(return_value=resp_200)
+    ctx_200.__aexit__ = AsyncMock(return_value=False)
+
+    mock_session = MagicMock(spec=aiohttp.ClientSession)
+    mock_session.post = MagicMock(side_effect=[ctx_400, ctx_200])
+
+    client = IOLApiClient(
+        session=mock_session,
+        username="user",
+        password="pw",
+        access_token="old_token",
+        refresh_token="expired_refresh_token",
+        token_expires_at=datetime.now(timezone.utc) - timedelta(hours=12),
+    )
+
+    token = await client.async_ensure_valid_token()
+
+    assert token == "fresh_password_token"
+    assert client.refresh_token == "fresh_refresh_token"
+    assert mock_session.post.call_count == 2
+    assert mock_session.post.call_args_list[0].kwargs["data"]["grant_type"] == "refresh_token"
+    assert mock_session.post.call_args_list[1].kwargs["data"]["grant_type"] == "password"

@@ -161,16 +161,26 @@ class IOLApiClient:
         )
 
     async def async_refresh_token(self) -> dict[str, Any]:
-        """Refresh access token using grant_type=refresh_token."""
+        """Refresh access token, falling back to password grant if refresh_token expired."""
         if not self._refresh_token:
             return await self.async_authenticate()
 
-        return await self._post_token(
-            {
-                "refresh_token": self._refresh_token,
-                "grant_type": "refresh_token",
-            }
-        )
+        try:
+            return await self._post_token(
+                {
+                    "refresh_token": self._refresh_token,
+                    "grant_type": "refresh_token",
+                }
+            )
+        except IOLAuthError as err:
+            if not self._username or not self._password:
+                raise
+            _LOGGER.info(
+                "IOL refresh token rejected (%s); re-authenticating with stored credentials",
+                err,
+            )
+            self._refresh_token = None
+            return await self.async_authenticate()
 
     async def async_ensure_valid_token(self) -> str:
         """Ensure a valid Bearer token is available, refreshing if <60s remain."""
@@ -209,7 +219,8 @@ class IOLApiClient:
                     if retry_on_401:
                         _LOGGER.debug("Received HTTP 401 from %s, refreshing token", endpoint)
                         async with self._token_lock:
-                            await self.async_refresh_token()
+                            if self._access_token == token:
+                                await self.async_refresh_token()
                         return await self._async_get(
                             endpoint, retry_on_401=False, params=params
                         )
