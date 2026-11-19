@@ -216,7 +216,7 @@ class InvertirOnlineTickerCard extends HTMLElement {
           .led-screen {
             position: relative;
             background: radial-gradient(circle at 50% 50%, #0d1520 0%, #05080d 100%);
-            padding: ${this._config.show_header ? "8px 0 10px" : "10px 0"};
+            padding: var(--iol-screen-padding, 8px 0 10px);
             font-family: "Consolas", "Monaco", "Courier New", monospace;
           }
           /* LED pixel dot-matrix grid overlay */
@@ -232,7 +232,7 @@ class InvertirOnlineTickerCard extends HTMLElement {
             z-index: 2;
           }
           .header {
-            display: ${this._config.show_header ? "flex" : "none"};
+            display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 0 14px 6px;
@@ -242,6 +242,9 @@ class InvertirOnlineTickerCard extends HTMLElement {
             letter-spacing: 1.4px;
             color: #00e5ff;
             text-shadow: 0 0 6px rgba(0, 229, 255, 0.55);
+          }
+          .header[hidden] {
+            display: none;
           }
           .status-group {
             display: flex;
@@ -282,7 +285,7 @@ class InvertirOnlineTickerCard extends HTMLElement {
           .marquee-track {
             display: inline-flex;
             align-items: center;
-            animation: iol-marquee ${this._config.speed}s linear infinite;
+            animation: iol-marquee var(--iol-speed, 35s) linear infinite;
           }
           .marquee-viewport:hover .marquee-track {
             animation-play-state: paused;
@@ -381,6 +384,18 @@ class InvertirOnlineTickerCard extends HTMLElement {
         </ha-card>
       `;
 
+      const screenEl = this.shadowRoot.querySelector(".led-screen");
+      if (screenEl) {
+        screenEl.style.setProperty(
+          "--iol-screen-padding",
+          this._config.show_header ? "8px 0 10px" : "10px 0"
+        );
+        screenEl.style.setProperty("--iol-speed", `${this._config.speed}s`);
+      }
+      const headerEl = this.shadowRoot.querySelector(".header");
+      if (headerEl) {
+        headerEl.hidden = !this._config.show_header;
+      }
       const titleEl = this.shadowRoot.querySelector(".title");
       if (titleEl) titleEl.textContent = this._config.title;
 

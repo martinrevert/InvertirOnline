@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-from zoneinfo import ZoneInfo
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -17,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CAUCION_TERMS, CONF_EXTRA_TICKERS, DEFAULT_MARKET, MARKET_TIMEZONE
+from .const import CAUCION_TERMS, CONF_EXTRA_TICKERS, DEFAULT_MARKET
 from .coordinator import (
     IOLDataUpdateCoordinator,
     is_within_market_window,
@@ -631,9 +630,9 @@ class IOLUltimaActualizacionSensor(IOLEntity, SensorEntity):
         dt = self.native_value
         return {
             "fecha_hora_local": (
-                dt.astimezone(ZoneInfo(MARKET_TIMEZONE)).isoformat(timespec="seconds")
+                dt.astimezone(self.coordinator.market_tz).isoformat(timespec="seconds")
                 if dt is not None
                 else None
             ),
-            "en_ventana_sondeo": is_within_market_window(),
+            "en_ventana_sondeo": is_within_market_window(tz=self.coordinator.market_tz),
         }

@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, time as dt_time, timedelta
+from datetime import datetime, time as dt_time, timedelta, timezone, tzinfo
 import logging
 import re
 from typing import Any
 import unicodedata
-from zoneinfo import ZoneInfo
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .api import (
     IOLApiClient,
@@ -494,10 +494,15 @@ def _extract_direct_ccl(
     return None
 
 
-def is_within_market_window(now: datetime | None = None) -> bool:
+_ARGENTINA_FALLBACK_TZ = timezone(timedelta(hours=-3))
+
+
+def is_within_market_window(
+    now: datetime | None = None, tz: tzinfo | None = None
+) -> bool:
     """Return True during Mon-Fri 10:30-18:30 America/Argentina/Buenos_Aires."""
-    tz = ZoneInfo(MARKET_TIMEZONE)
-    current = now.astimezone(tz) if now is not None else datetime.now(tz)
+    target_tz = tz or _ARGENTINA_FALLBACK_TZ
+    current = now.astimezone(target_tz) if now is not None else datetime.now(target_tz)
     if current.weekday() >= 5:
         return False
     current_time = current.time()
@@ -506,10 +511,12 @@ def is_within_market_window(now: datetime | None = None) -> bool:
     return open_time <= current_time <= close_time
 
 
-def is_byma_market_open(now: datetime | None = None) -> bool:
+def is_byma_market_open(
+    now: datetime | None = None, tz: tzinfo | None = None
+) -> bool:
     """Return True during regular BYMA trading hours (Mon-Fri 11:00-17:00 ART)."""
-    tz = ZoneInfo(MARKET_TIMEZONE)
-    current = now.astimezone(tz) if now is not None else datetime.now(tz)
+    target_tz = tz or _ARGENTINA_FALLBACK_TZ
+    current = now.astimezone(target_tz) if now is not None else datetime.now(target_tz)
     if current.weekday() >= 5:
         return False
     current_time = current.time()
@@ -740,12 +747,26 @@ class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=f"{DOMAIN}_{entry.entry_id}",
             update_interval=timedelta(minutes=interval_minutes),
         )
         self.api = api
         self.config_entry = entry
         self._last_inflacion_fetch: datetime | None = None
+        self._market_tz: tzinfo | None = None
+
+    @property
+    def market_tz(self) -> tzinfo:
+        """Return the resolved market timezone (or UTC-3 fallback before setup)."""
+        return self._market_tz or _ARGENTINA_FALLBACK_TZ
+
+    async def _async_setup(self) -> None:
+        """Resolve the market timezone asynchronously outside the event loop."""
+        self._market_tz = (
+            await dt_util.async_get_time_zone(MARKET_TIMEZONE)
+            or _ARGENTINA_FALLBACK_TZ
+        )
 
     async def _async_get_quote_cached(
         self,
@@ -839,9 +860,15 @@ class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch consolidated market and account data from IOL API v2."""
+        if self._market_tz is None:
+            self._market_tz = (
+                await dt_util.async_get_time_zone(MARKET_TIMEZONE)
+                or _ARGENTINA_FALLBACK_TZ
+            )
+
         # Outside Mon-Fri 10:30-18:30 ART, skip polling to preserve API quota
         # (Always allow initial refresh when self.data is None on startup)
-        if self.data is not None and not is_within_market_window():
+        if self.data is not None and not is_within_market_window(tz=self.market_tz):
             _LOGGER.debug(
                 "Outside Argentina market window (Mon-Fri 10:30-18:30 ART); skipping IOL poll"
             )
@@ -977,7 +1004,7 @@ class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         inflacion_interanual = previous_data.get("inflacion_interanual")
         inflacion_mensual_usd = previous_data.get("inflacion_mensual_usd")
         inflacion_interanual_usd = previous_data.get("inflacion_interanual_usd")
-        now_utc = datetime.now(ZoneInfo("UTC"))
+        now_utc = dt_util.utcnow()
         should_fetch_inflacion = (
             self._last_inflacion_fetch is None
             or inflacion_mensual is None
@@ -1023,5 +1050,5 @@ class IOLDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "inflacion_interanual": inflacion_interanual,
             "inflacion_mensual_usd": inflacion_mensual_usd,
             "inflacion_interanual_usd": inflacion_interanual_usd,
-            "ultima_actualizacion": datetime.now(ZoneInfo(MARKET_TIMEZONE)),
+            "ultima_actualizacion": datetime.now(self.market_tz),
         }

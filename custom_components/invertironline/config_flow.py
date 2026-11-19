@@ -156,15 +156,11 @@ class IOLConfigFlow(ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> IOLOptionsFlow:
         """Return the options flow for this handler."""
-        return IOLOptionsFlow(config_entry)
+        return IOLOptionsFlow()
 
 
 class IOLOptionsFlow(OptionsFlow):
     """Handle InvertirOnline options (extra tickers and scan interval)."""
-
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -193,7 +189,7 @@ class IOLOptionsFlow(OptionsFlow):
                     },
                 )
 
-        current_tickers = self._config_entry.options.get(CONF_EXTRA_TICKERS, [])
+        current_tickers = self.config_entry.options.get(CONF_EXTRA_TICKERS, [])
         if isinstance(current_tickers, list):
             default_tickers = ", ".join(current_tickers)
         else:

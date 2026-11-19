@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 URL_BASE = "/invertironline_files"
 CARD_FILENAME = "invertironline-ticker-card.js"
-CARD_VERSION = "1.0.3"
+CARD_VERSION = "1.0.4"
 
 
 async def async_register_frontend(hass: HomeAssistant) -> None:
@@ -31,10 +31,6 @@ async def async_register_frontend(hass: HomeAssistant) -> None:
         return
 
     frontend_dir = Path(__file__).parent / "frontend"
-    card_path = frontend_dir / CARD_FILENAME
-    if not card_path.is_file():
-        _LOGGER.warning("Frontend card file not found at %s", card_path)
-        return
 
     await hass.http.async_register_static_paths(
         [StaticPathConfig(URL_BASE, str(frontend_dir), cache_headers=False)]

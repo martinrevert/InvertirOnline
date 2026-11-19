@@ -41,13 +41,13 @@ class IOLMercadoAbiertoBinarySensor(IOLEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return True during regular BYMA trading hours (Mon-Fri 11:00-17:00 ART)."""
-        return is_byma_market_open()
+        return is_byma_market_open(tz=self.coordinator.market_tz)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return polling window status and regular session schedule."""
         return {
-            "en_ventana_sondeo": is_within_market_window(),
+            "en_ventana_sondeo": is_within_market_window(tz=self.coordinator.market_tz),
             "horario_rueda": "11:00-17:00 ART (Lun-Vie)",
             "horario_sondeo": "10:30-18:30 ART (Lun-Vie)",
         }
