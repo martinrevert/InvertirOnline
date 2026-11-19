@@ -196,7 +196,7 @@ class IOLOptionsFlow(OptionsFlow):
             default_tickers = str(current_tickers or "")
 
         default_interval = int(
-            self._config_entry.options.get(
+            self.config_entry.options.get(
                 CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MINUTES
             )
         )
